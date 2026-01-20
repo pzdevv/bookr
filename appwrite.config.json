@@ -1,0 +1,407 @@
+{
+    "projectId": "bookr-niv",
+    "projectName": "bookr",
+    "databases": [
+        {
+            "$id": "bookr-db",
+            "name": "Bookr Database",
+            "enabled": true
+        }
+    ],
+    "collections": [
+        {
+            "$id": "users",
+            "databaseId": "bookr-db",
+            "name": "users",
+            "documentSecurity": false,
+            "attributes": [],
+            "indexes": [],
+            "enabled": true
+        },
+        {
+            "databaseId": "bookr-db",
+            "$id": "event_types",
+            "name": "Event Types",
+            "enabled": true,
+            "documentSecurity": true,
+            "permissions": [
+                "read(\"any\")",
+                "create(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "attributes": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "size": 255,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "title",
+                    "type": "string",
+                    "size": 255,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "duration",
+                    "type": "integer",
+                    "min": 5,
+                    "max": 480,
+                    "required": true,
+                    "array": false,
+                    "default": 30
+                },
+                {
+                    "key": "buffer",
+                    "type": "integer",
+                    "min": 0,
+                    "max": 120,
+                    "required": true,
+                    "array": false,
+                    "default": 0
+                },
+                {
+                    "key": "color",
+                    "type": "string",
+                    "size": 50,
+                    "required": true,
+                    "array": false,
+                    "default": "#3B82F6"
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "size": 2000,
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "slug",
+                    "type": "string",
+                    "size": 255,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isActive",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": true
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "userId_index",
+                    "type": "key",
+                    "attributes": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "slug_index",
+                    "type": "key",
+                    "attributes": [
+                        "slug"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "isActive_index",
+                    "type": "key",
+                    "attributes": [
+                        "isActive"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "userId_slug_unique",
+                    "type": "unique",
+                    "attributes": [
+                        "userId",
+                        "slug"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "databaseId": "bookr-db",
+            "$id": "availability",
+            "name": "Availability",
+            "enabled": true,
+            "documentSecurity": true,
+            "permissions": [
+                "read(\"any\")",
+                "create(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "attributes": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "size": 255,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "day",
+                    "type": "integer",
+                    "min": 0,
+                    "max": 6,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "startTime",
+                    "type": "string",
+                    "size": 10,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "endTime",
+                    "type": "string",
+                    "size": 10,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isEnabled",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": true
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "userId_index",
+                    "type": "key",
+                    "attributes": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "day_index",
+                    "type": "key",
+                    "attributes": [
+                        "day"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "userId_day_index",
+                    "type": "key",
+                    "attributes": [
+                        "userId",
+                        "day"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "databaseId": "bookr-db",
+            "$id": "bookings",
+            "name": "Bookings",
+            "enabled": true,
+            "documentSecurity": true,
+            "permissions": [
+                "read(\"any\")",
+                "create(\"any\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "attributes": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "size": 255,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "eventTypeId",
+                    "type": "string",
+                    "size": 255,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "guestName",
+                    "type": "string",
+                    "size": 255,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "guestEmail",
+                    "type": "string",
+                    "size": 320,
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "slotTime",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "size": 50,
+                    "required": true,
+                    "array": false,
+                    "default": "pending",
+                    "elements": [
+                        "pending",
+                        "confirmed",
+                        "cancelled",
+                        "completed"
+                    ]
+                },
+                {
+                    "key": "notes",
+                    "type": "string",
+                    "size": 5000,
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "timezone",
+                    "type": "string",
+                    "size": 100,
+                    "required": true,
+                    "array": false,
+                    "default": "UTC"
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "userId_index",
+                    "type": "key",
+                    "attributes": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "eventTypeId_index",
+                    "type": "key",
+                    "attributes": [
+                        "eventTypeId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "guestEmail_index",
+                    "type": "key",
+                    "attributes": [
+                        "guestEmail"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "slotTime_index",
+                    "type": "key",
+                    "attributes": [
+                        "slotTime"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "status_index",
+                    "type": "key",
+                    "attributes": [
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "userId_slotTime_index",
+                    "type": "key",
+                    "attributes": [
+                        "userId",
+                        "slotTime"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                }
+            ]
+        }
+    ],
+    "buckets": [
+        {
+            "$id": "avatars",
+            "name": "Avatars",
+            "enabled": true,
+            "maximumFileSize": 5000000,
+            "allowedFileExtensions": [
+                "jpg",
+                "jpeg",
+                "png",
+                "gif",
+                "webp"
+            ],
+            "compression": "gzip",
+            "encryption": true,
+            "antivirus": true,
+            "permissions": [
+                "read(\"any\")",
+                "create(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ]
+        }
+    ]
+}
