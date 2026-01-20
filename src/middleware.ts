@@ -26,8 +26,15 @@ export function middleware(request: NextRequest) {
     // Permissions Policy (restrict access to sensitive browser features)
     headers.set('Permissions-Policy', 'camera=(), geolocation=(), microphone=(self)');
 
-    // HSTS - Force HTTPS (uncomment in production with HTTPS)
-    // headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    // HSTS - Force HTTPS (enabled for production)
+    headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+
+    // Prevent downloads from opening automatically
+    headers.set('X-Download-Options', 'noopen');
+
+    // Cross-Origin policies for enhanced security
+    headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+    headers.set('Cross-Origin-Resource-Policy', 'same-origin');
 
     // Content Security Policy (relaxed for development, tighten for production)
     headers.set(

@@ -1,17 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/layout';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { userService } from '@/lib/appwrite/database';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function SettingsPage() {
-    const { user, userProfile, signOut } = useAuth();
+    const { user, userProfile, refreshUser } = useAuth();
     const [name, setName] = useState('');
     const [username, setUsername] = useState('');
     const [bio, setBio] = useState('');
     const [timezone, setTimezone] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [avatarUrl, setAvatarUrl] = useState('');
+    const [saveMessage, setSaveMessage] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [notifications, setNotifications] = useState({
         emailBookings: true,
         emailReminders: true,
@@ -21,12 +30,87 @@ export default function SettingsPage() {
     useEffect(() => {
         if (userProfile) {
             setName(userProfile.name || '');
-            // Use saved username or generate from name
             setUsername(userProfile.username || userProfile.name?.toLowerCase().replace(/\s+/g, '-') || '');
             setBio(userProfile.bio || '');
             setTimezone(userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+            setAvatarUrl(userProfile.avatar || '');
         }
     }, [userProfile]);
+
+    // GSAP Scroll Animations
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        const sections = containerRef.current.querySelectorAll('.settings-section');
+
+        sections.forEach((section, index) => {
+            gsap.fromTo(section,
+                {
+                    opacity: 0,
+                    y: 60,
+                    scale: 0.95
+                },
+                {
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                    duration: 0.8,
+                    ease: 'power3.out',
+                    scrollTrigger: {
+                        trigger: section,
+                        start: 'top 85%',
+                        end: 'top 50%',
+                        toggleActions: 'play none none reverse'
+                    },
+                    delay: index * 0.1
+                }
+            );
+        });
+
+        return () => {
+            ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+        };
+    }, []);
+
+    const handleAvatarClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !userProfile) return;
+
+        // Validate file
+        if (!file.type.startsWith('image/')) {
+            setSaveMessage('Please select an image file');
+            return;
+        }
+        if (file.size > 1024 * 1024) { // 1MB limit
+            setSaveMessage('Image must be under 1MB');
+            return;
+        }
+
+        setIsUploading(true);
+        try {
+            const url = await userService.uploadAvatar(file);
+            await userService.update(userProfile.$id, { avatar: url });
+            setAvatarUrl(url);
+            await refreshUser();
+            setSaveMessage('Avatar updated!');
+
+            // Animate the avatar
+            gsap.fromTo('.avatar-container',
+                { scale: 1.2, opacity: 0 },
+                { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.7)' }
+            );
+        } catch (error) {
+            console.error('Avatar upload error:', error);
+            setSaveMessage('Failed to upload avatar');
+        } finally {
+            setIsUploading(false);
+            setTimeout(() => setSaveMessage(''), 3000);
+        }
+    };
 
     const handleSave = async () => {
         if (!userProfile) return;
@@ -36,74 +120,113 @@ export default function SettingsPage() {
                 name,
                 timezone
             });
-        } catch (error) { console.error('Error:', error); }
-        finally { setIsSaving(false); }
+            await refreshUser();
+            setSaveMessage('Settings saved!');
+
+            // Success animation
+            gsap.fromTo('.save-btn',
+                { scale: 1 },
+                { scale: 1.05, duration: 0.2, yoyo: true, repeat: 1, ease: 'power2.out' }
+            );
+        } catch (error) {
+            console.error('Error:', error);
+            setSaveMessage('Failed to save');
+        }
+        finally {
+            setIsSaving(false);
+            setTimeout(() => setSaveMessage(''), 3000);
+        }
     };
 
     return (
         <DashboardLayout>
             {/* Header */}
-            <header className="sticky top-0 z-10 flex items-center justify-between bg-white/80 backdrop-blur-md px-8 py-4">
+            <header className="sticky top-0 z-10 flex items-center justify-between bg-white px-8 py-4 border-b border-[#850000]/5">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold tracking-tight">Settings</h2>
+                    <h2 className="text-xl font-bold tracking-tight text-[#1d0c0c]">Settings</h2>
+                    {saveMessage && (
+                        <span className={`ml-4 text-sm font-medium px-3 py-1 rounded-lg ${saveMessage.includes('Failed') ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                            {saveMessage}
+                        </span>
+                    )}
                 </div>
                 <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="px-4 py-2 rounded-xl bg-[#fbbd23] text-[#1c180c] text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
+                    className="save-btn px-4 py-2 rounded-lg bg-[#850000] text-white text-sm font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all disabled:opacity-50"
                 >
                     {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
             </header>
 
-            <div className="p-8 max-w-3xl space-y-6">
+            <div ref={containerRef} className="p-8 max-w-3xl space-y-6">
                 {/* Profile Section */}
-                <div className="bg-white rounded-2xl border border-[#e9e1cd] overflow-hidden">
-                    <div className="px-6 py-5 border-b border-[#e9e1cd]">
-                        <h3 className="text-lg font-bold">Profile</h3>
-                        <p className="text-sm text-gray-500">Manage your public profile information.</p>
+                <div className="settings-section bg-white rounded-xl border border-[#850000]/5 overflow-hidden shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)]">
+                    <div className="px-6 py-5 border-b border-[#850000]/5">
+                        <h3 className="text-lg font-bold text-[#1d0c0c]">Profile</h3>
+                        <p className="text-sm text-[#6b4444]">Manage your public profile information.</p>
                     </div>
                     <div className="p-6 space-y-6">
                         {/* Avatar */}
                         <div className="flex items-center gap-6">
                             <div
-                                className="w-20 h-20 rounded-full bg-[#fbbd23]/20 flex items-center justify-center bg-cover bg-center"
-                                style={userProfile?.avatar ? { backgroundImage: `url('${userProfile.avatar}')` } : undefined}
+                                onClick={handleAvatarClick}
+                                className="avatar-container w-20 h-20 rounded-xl bg-[#850000] flex items-center justify-center bg-cover bg-center shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] cursor-pointer hover:scale-105 transition-transform relative overflow-hidden group"
+                                style={avatarUrl ? { backgroundImage: `url('${avatarUrl}')` } : undefined}
                             >
-                                {!userProfile?.avatar && <span className="text-[#fbbd23] text-3xl font-bold">{name.charAt(0) || 'U'}</span>}
+                                {!avatarUrl && <span className="text-white text-3xl font-bold">{name.charAt(0) || 'U'}</span>}
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-white text-2xl">photo_camera</span>
+                                </div>
+                                {isUploading && (
+                                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                                        <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    </div>
+                                )}
                             </div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAvatarChange}
+                                className="hidden"
+                            />
                             <div className="flex flex-col gap-2">
-                                <button className="px-4 py-2 rounded-xl bg-[#f4f0e6] text-[#1c180c] text-sm font-medium hover:bg-[#e9e1cd] transition-colors">
-                                    Change avatar
+                                <button
+                                    onClick={handleAvatarClick}
+                                    disabled={isUploading}
+                                    className="px-4 py-2 rounded-lg bg-[#850000]/5 text-[#1d0c0c] text-sm font-medium border border-[#850000]/10 shadow-[2px_2px_0px_0px_rgba(133,0,0,0.1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all disabled:opacity-50"
+                                >
+                                    {isUploading ? 'Uploading...' : 'Change avatar'}
                                 </button>
-                                <p className="text-xs text-gray-400">JPG, GIF or PNG. 1MB max.</p>
+                                <p className="text-xs text-[#6b4444]">JPG, GIF or PNG. 1MB max.</p>
                             </div>
                         </div>
 
                         {/* Name */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Full Name</label>
+                            <label className="block text-xs font-semibold text-[#1d0c0c] mb-1.5">Full Name</label>
                             <input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="w-full h-11 px-4 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#fbbd23]/20 focus:border-[#fbbd23] transition-all"
+                                className="w-full h-11 px-4 rounded-lg border border-[#850000]/10 text-sm focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition-all bg-white shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)]"
                                 placeholder="Your name"
                             />
                         </div>
 
                         {/* Username */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Username</label>
+                            <label className="block text-xs font-semibold text-[#1d0c0c] mb-1.5">Username</label>
                             <div className="flex">
-                                <span className="h-11 px-4 rounded-l-xl border border-r-0 border-gray-200 bg-[#f4f0e6] flex items-center text-sm text-gray-500">
-                                    bookr.com/
+                                <span className="h-11 px-4 rounded-l-lg border border-r-0 border-[#850000]/10 bg-[#850000]/5 flex items-center text-sm text-[#6b4444]">
+                                    bookncall.me/
                                 </span>
                                 <input
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                                    className="flex-1 h-11 px-4 rounded-r-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#fbbd23]/20 focus:border-[#fbbd23] transition-all"
+                                    className="flex-1 h-11 px-4 rounded-r-lg border border-[#850000]/10 text-sm focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition-all bg-white shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)]"
                                     placeholder="username"
                                 />
                             </div>
@@ -111,23 +234,23 @@ export default function SettingsPage() {
 
                         {/* Bio */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Bio</label>
+                            <label className="block text-xs font-semibold text-[#1d0c0c] mb-1.5">Bio</label>
                             <textarea
                                 value={bio}
                                 onChange={(e) => setBio(e.target.value)}
                                 rows={3}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#fbbd23]/20 focus:border-[#fbbd23] transition-all resize-none"
+                                className="w-full px-4 py-3 rounded-lg border border-[#850000]/10 text-sm focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition-all resize-none bg-white shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)]"
                                 placeholder="A brief description for your profile."
                             />
                         </div>
 
                         {/* Timezone */}
                         <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Timezone</label>
+                            <label className="block text-xs font-semibold text-[#1d0c0c] mb-1.5">Timezone</label>
                             <select
                                 value={timezone}
                                 onChange={(e) => setTimezone(e.target.value)}
-                                className="w-full h-11 px-4 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-[#fbbd23]/20 focus:border-[#fbbd23] transition-all"
+                                className="w-full h-11 px-4 rounded-lg border border-[#850000]/10 text-sm focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition-all bg-white shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)]"
                             >
                                 <option value="America/New_York">Eastern Time (ET)</option>
                                 <option value="America/Chicago">Central Time (CT)</option>
@@ -143,44 +266,44 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Notifications Section */}
-                <div className="bg-white rounded-2xl border border-[#e9e1cd] overflow-hidden">
-                    <div className="px-6 py-5 border-b border-[#e9e1cd]">
-                        <h3 className="text-lg font-bold">Notifications</h3>
-                        <p className="text-sm text-gray-500">Manage how you receive notifications.</p>
+                <div className="settings-section bg-white rounded-xl border border-[#850000]/5 overflow-hidden shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)]">
+                    <div className="px-6 py-5 border-b border-[#850000]/5">
+                        <h3 className="text-lg font-bold text-[#1d0c0c]">Notifications</h3>
+                        <p className="text-sm text-[#6b4444]">Manage how you receive notifications.</p>
                     </div>
                     <div className="p-6 space-y-4">
                         <div className="flex items-center justify-between py-3">
                             <div>
-                                <p className="text-sm font-medium text-[#1c180c]">Booking confirmations</p>
-                                <p className="text-xs text-gray-500">Get notified when someone books a meeting.</p>
+                                <p className="text-sm font-medium text-[#1d0c0c]">Booking confirmations</p>
+                                <p className="text-xs text-[#6b4444]">Get notified when someone books a meeting.</p>
                             </div>
                             <button
                                 onClick={() => setNotifications({ ...notifications, emailBookings: !notifications.emailBookings })}
-                                className={`w-10 h-6 rounded-full transition-colors relative ${notifications.emailBookings ? 'bg-[#fbbd23]' : 'bg-gray-200'}`}
+                                className={`w-10 h-6 rounded-full transition-colors relative ${notifications.emailBookings ? 'bg-[#850000] shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]' : 'bg-gray-200'}`}
                             >
                                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${notifications.emailBookings ? 'left-5' : 'left-1'}`} />
                             </button>
                         </div>
-                        <div className="flex items-center justify-between py-3 border-t border-gray-100">
+                        <div className="flex items-center justify-between py-3 border-t border-[#850000]/5">
                             <div>
-                                <p className="text-sm font-medium text-[#1c180c]">Reminders</p>
-                                <p className="text-xs text-gray-500">Receive reminders before scheduled meetings.</p>
+                                <p className="text-sm font-medium text-[#1d0c0c]">Reminders</p>
+                                <p className="text-xs text-[#6b4444]">Receive reminders before scheduled meetings.</p>
                             </div>
                             <button
                                 onClick={() => setNotifications({ ...notifications, emailReminders: !notifications.emailReminders })}
-                                className={`w-10 h-6 rounded-full transition-colors relative ${notifications.emailReminders ? 'bg-[#fbbd23]' : 'bg-gray-200'}`}
+                                className={`w-10 h-6 rounded-full transition-colors relative ${notifications.emailReminders ? 'bg-[#850000] shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]' : 'bg-gray-200'}`}
                             >
                                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${notifications.emailReminders ? 'left-5' : 'left-1'}`} />
                             </button>
                         </div>
-                        <div className="flex items-center justify-between py-3 border-t border-gray-100">
+                        <div className="flex items-center justify-between py-3 border-t border-[#850000]/5">
                             <div>
-                                <p className="text-sm font-medium text-[#1c180c]">Marketing emails</p>
-                                <p className="text-xs text-gray-500">News, updates, and promotional offers.</p>
+                                <p className="text-sm font-medium text-[#1d0c0c]">Marketing emails</p>
+                                <p className="text-xs text-[#6b4444]">News, updates, and promotional offers.</p>
                             </div>
                             <button
                                 onClick={() => setNotifications({ ...notifications, emailMarketing: !notifications.emailMarketing })}
-                                className={`w-10 h-6 rounded-full transition-colors relative ${notifications.emailMarketing ? 'bg-[#fbbd23]' : 'bg-gray-200'}`}
+                                className={`w-10 h-6 rounded-full transition-colors relative ${notifications.emailMarketing ? 'bg-[#850000] shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]' : 'bg-gray-200'}`}
                             >
                                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${notifications.emailMarketing ? 'left-5' : 'left-1'}`} />
                             </button>
@@ -189,17 +312,17 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Danger Zone */}
-                <div className="bg-white rounded-2xl border border-red-200 overflow-hidden">
-                    <div className="px-6 py-5 border-b border-red-100 bg-red-50">
+                <div className="settings-section bg-white rounded-xl border border-red-200 overflow-hidden shadow-[4px_4px_0px_0px_rgba(220,38,38,0.2)]">
+                    <div className="px-6 py-5 border-b border-red-100 bg-red-50/50">
                         <h3 className="text-lg font-bold text-red-700">Danger Zone</h3>
                         <p className="text-sm text-red-600">Irreversible actions for your account.</p>
                     </div>
                     <div className="p-6 flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-[#1c180c]">Delete account</p>
-                            <p className="text-xs text-gray-500">Permanently delete your account and all data.</p>
+                            <p className="text-sm font-medium text-[#1d0c0c]">Delete account</p>
+                            <p className="text-xs text-[#6b4444]">Permanently delete your account and all data.</p>
                         </div>
-                        <button className="px-4 py-2 rounded-xl bg-red-100 text-red-700 text-sm font-bold hover:bg-red-200 transition-colors">
+                        <button className="px-4 py-2 rounded-lg bg-red-100 text-red-700 text-sm font-bold hover:bg-red-200 transition-colors border border-red-200 shadow-[2px_2px_0px_0px_rgba(220,38,38,0.2)]">
                             Delete Account
                         </button>
                     </div>

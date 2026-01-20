@@ -60,7 +60,7 @@ export default function EventTypesPage() {
     const copyLink = (slug: string) => {
         // Use username if available, otherwise fall back to name-based slug
         const userSlug = userProfile?.username || userProfile?.name?.toLowerCase().replace(/\s+/g, '-');
-        const link = `${window.location.origin}/book/${userSlug}${slug}`;
+        const link = `https://bookncall.me/${userSlug}${slug}`;
         navigator.clipboard.writeText(link);
         setCopiedSlug(slug);
         setTimeout(() => setCopiedSlug(null), 2000);

@@ -23,8 +23,8 @@ export function DashboardLayout({ children, isAdmin = false }: DashboardLayoutPr
     // Show loading while checking auth
     if (isLoading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-[#fcfbf8]">
-                <div className="w-8 h-8 border-4 border-[#fbbd23] border-t-transparent rounded-full animate-spin" />
+            <div className="flex h-screen items-center justify-center bg-[#fcf8f8]">
+                <div className="w-8 h-8 border-4 border-[#850000] border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
@@ -35,7 +35,7 @@ export function DashboardLayout({ children, isAdmin = false }: DashboardLayoutPr
     }
 
     return (
-        <div className="flex h-screen overflow-hidden bg-gradient-to-br from-[#f8f6f0] via-[#fdfcf9] to-[#f5f2ea]">
+        <div className="flex h-screen overflow-hidden bg-[#fcf8f8]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
             <DashboardSidebar isAdmin={isAdmin} />
             <main className="flex-1 overflow-y-auto md:ml-72 pt-16 md:pt-0">
                 {children}
@@ -43,4 +43,3 @@ export function DashboardLayout({ children, isAdmin = false }: DashboardLayoutPr
         </div>
     );
 }
-
