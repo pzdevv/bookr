@@ -159,8 +159,8 @@ html {
 
 /* Selection */
 ::selection {
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: rgba(133, 0, 0, 0.7);
+  color: #ffffff;
 }
 
 /* Custom scrollbar */

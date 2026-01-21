@@ -14,18 +14,16 @@ interface DashboardSidebarProps {
 
 const navItems = [
     { icon: 'home', label: 'Home', href: '/dashboard' },
+    { icon: 'event', label: 'Event Types', href: '/dashboard/event-types' },
     { icon: 'schedule', label: 'Availability', href: '/dashboard/availability' },
     { icon: 'calendar_month', label: 'Bookings', href: '/dashboard/bookings' },
     { icon: 'settings', label: 'Settings', href: '/dashboard/settings' },
 ];
 
-// Get booking URL base - uses current host for development, production domain for production
+// Get booking URL base - uses current origin with /book path
 const getBookingBaseUrl = () => {
-    if (typeof window === 'undefined') return '';
-    const host = window.location.host;
-    return host.includes('localhost') || host.includes('127.0.0.1')
-        ? `${window.location.origin}/book`
-        : 'https://bookncall.me';
+    if (typeof window === 'undefined') return '/book';
+    return `${window.location.origin}/book`;
 };
 
 export function DashboardHeader() {

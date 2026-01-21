@@ -19,6 +19,7 @@ export default function SettingsPage() {
     const [isUploading, setIsUploading] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState('');
     const [saveMessage, setSaveMessage] = useState('');
+    const [usernameError, setUsernameError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [notifications, setNotifications] = useState({
@@ -115,9 +116,29 @@ export default function SettingsPage() {
     const handleSave = async () => {
         if (!userProfile) return;
         setIsSaving(true);
+        setUsernameError('');
+
         try {
+            // Validate username format
+            const cleanUsername = username.toLowerCase().replace(/[^a-z0-9-]/g, '');
+            if (cleanUsername.length < 3) {
+                setUsernameError('Username must be at least 3 characters');
+                setIsSaving(false);
+                return;
+            }
+
+            // Check if username is available
+            const isAvailable = await userService.isUsernameAvailable(cleanUsername, userProfile.$id);
+            if (!isAvailable) {
+                setUsernameError('This username is already taken');
+                setIsSaving(false);
+                return;
+            }
+
             await userService.update(userProfile.$id, {
                 name,
+                username: cleanUsername,
+                bio,
                 timezone
             });
             await refreshUser();
@@ -217,19 +238,29 @@ export default function SettingsPage() {
 
                         {/* Username */}
                         <div>
-                            <label className="block text-xs font-semibold text-[#1d0c0c] mb-1.5">Username</label>
+                            <label className="block text-xs font-semibold text-[#1d0c0c] mb-1.5">Booking Link</label>
                             <div className="flex">
                                 <span className="h-11 px-4 rounded-l-lg border border-r-0 border-[#850000]/10 bg-[#850000]/5 flex items-center text-sm text-[#6b4444]">
-                                    bookncall.me/
+                                    /book/
                                 </span>
                                 <input
                                     type="text"
                                     value={username}
-                                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                                    className="flex-1 h-11 px-4 rounded-r-lg border border-[#850000]/10 text-sm focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition-all bg-white shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)]"
-                                    placeholder="username"
+                                    onChange={(e) => {
+                                        setUsername(e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+                                        setUsernameError('');
+                                    }}
+                                    className={`flex-1 h-11 px-4 rounded-r-lg border text-sm focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition-all bg-white shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)] ${usernameError ? 'border-red-500' : 'border-[#850000]/10'}`}
+                                    placeholder="your-custom-slug"
                                 />
                             </div>
+                            {usernameError && (
+                                <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-sm">error</span>
+                                    {usernameError}
+                                </p>
+                            )}
+                            <p className="text-xs text-[#6b4444] mt-1">This is your unique booking page URL. Use lowercase letters, numbers, and hyphens.</p>
                         </div>
 
                         {/* Bio */}

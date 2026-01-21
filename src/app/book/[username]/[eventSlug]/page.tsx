@@ -7,6 +7,7 @@ import { use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventTypeService, availabilityService, bookingService, userService, generateCallRoomId, EventType, Availability, User } from '@/lib/appwrite/database';
 import { formatTime, getTimeSlots, getUserTimezone } from '@/lib/utils';
+import { Logo } from '@/components/ui/logo';
 
 export default function BookEventPage({ params }: { params: Promise<{ username: string; eventSlug: string }> }) {
     const { username, eventSlug } = use(params);
@@ -174,12 +175,7 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
 
             {/* Header */}
             <header className="relative z-10 flex items-center justify-between px-6 md:px-10 py-5 bg-white/60 backdrop-blur-xl border-b border-[#850000]/5">
-                <Link href="/" className="flex items-center gap-3 group">
-                    <div className="w-11 h-11 bg-[#850000] rounded-lg flex items-center justify-center shadow-lg shadow-[#850000]/20 group-hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined text-white text-xl">calendar_today</span>
-                    </div>
-                    <span className="text-xl font-bold text-[#1d0c0c] hidden sm:block">Book<span className="text-[#850000] italic" style={{ fontFamily: "'Playfair Display', serif" }}>&</span>Call</span>
-                </Link>
+                <Logo size="sm" href="/" />
                 <div className="flex gap-3">
                     <Link href="/auth/login" className="px-5 py-2.5 text-sm font-medium text-[#6b4444] hover:text-[#1d0c0c] transition-colors">
                         Log In
@@ -507,14 +503,9 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                 </motion.div>
 
                 {/* Footer */}
-                <footer className="mt-10 text-center">
-                    <p className="text-[#6b4444] text-sm flex items-center justify-center gap-2">
-                        Powered by
-                        <span className="flex items-center gap-1.5 text-[#850000] font-bold">
-                            <span className="material-symbols-outlined text-lg">calendar_today</span>
-                            Book&Call
-                        </span>
-                    </p>
+                <footer className="mt-10 text-center flex flex-col items-center gap-2">
+                    <p className="text-[#6b4444] text-sm">Powered by</p>
+                    <Logo size="sm" href="/" />
                 </footer>
             </main>
 

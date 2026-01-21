@@ -137,6 +137,22 @@ export const userService = {
         }
     },
 
+    async isUsernameAvailable(username: string, excludeUserId?: string): Promise<boolean> {
+        try {
+            const users = await databases.listDocuments(databaseId, collections.users, [
+                Query.equal('username', username),
+            ]);
+            if (users.documents.length === 0) return true;
+            // If excluding a user (for updates), check if the match is that user
+            if (excludeUserId && users.documents.length === 1 && users.documents[0].$id === excludeUserId) {
+                return true;
+            }
+            return false;
+        } catch {
+            return true; // Assume available on error
+        }
+    },
+
     async uploadAvatar(file: File): Promise<string> {
         const uploaded = await storage.createFile(buckets.avatars, ID.unique(), file);
         const url = storage.getFileView(buckets.avatars, uploaded.$id);

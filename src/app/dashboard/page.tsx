@@ -10,14 +10,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Get booking URL base - uses current host for development, production domain for production
+// Get booking URL base - uses current origin with /book path
 const getBookingBaseUrl = () => {
-    if (typeof window === 'undefined') return '';
-    // Use current host for local development, production domain for production builds
-    const host = window.location.host;
-    return host.includes('localhost') || host.includes('127.0.0.1')
-        ? `${window.location.origin}/book`
-        : 'https://bookncall.me';
+    if (typeof window === 'undefined') return '/book';
+    return `${window.location.origin}/book`;
 };
 
 export default function DashboardPage() {
@@ -352,7 +348,7 @@ export default function DashboardPage() {
                                     LIVE
                                 </span>
                                 <code className="text-sm font-mono text-white/70 truncate max-w-[250px] lg:max-w-none">
-                                    {mounted && getUserSlug() ? `${getBookingBaseUrl().replace('https://', '').replace('http://', '').replace('/book', '')}/${getUserSlug()}` : '...'}
+                                    {mounted && getUserSlug() ? `${window.location.host}/book/${getUserSlug()}` : '...'}
                                 </code>
                             </div>
                         </div>
@@ -370,36 +366,36 @@ export default function DashboardPage() {
 
                 {/* Stats Grid */}
                 <div ref={statsRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="stat-card bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)] border border-[#850000]/5 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all group cursor-default" style={{ transformStyle: 'preserve-3d' }}>
+                    <div className="stat-card bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/5 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(133,0,0,0.1)] hover:border-[#850000]/10 transition-all duration-200 group cursor-default" style={{ transformStyle: 'preserve-3d' }}>
                         <div className="flex items-center justify-between mb-3">
-                            <div className="w-11 h-11 rounded-lg bg-[#850000] flex items-center justify-center group-hover:scale-110 transition-transform shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                            <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                                 <span className="material-symbols-outlined text-white text-xl">confirmation_number</span>
                             </div>
-                            <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-md">ALL TIME</span>
+                            <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-md group-hover:scale-105 transition-transform">ALL TIME</span>
                         </div>
-                        <p className="text-3xl font-black text-[#1d0c0c]">{stats.total}</p>
+                        <p className="text-3xl font-black text-[#1d0c0c] group-hover:text-[#850000] transition-colors">{stats.total}</p>
                         <p className="text-sm text-[#6b4444] mt-0.5">Total Bookings</p>
                     </div>
 
-                    <div className="stat-card bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)] border border-[#850000]/5 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all group cursor-default" style={{ transformStyle: 'preserve-3d' }}>
+                    <div className="stat-card bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/5 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(133,0,0,0.1)] hover:border-blue-200 transition-all duration-200 group cursor-default" style={{ transformStyle: 'preserve-3d' }}>
                         <div className="flex items-center justify-between mb-3">
-                            <div className="w-11 h-11 rounded-lg bg-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                            <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                                 <span className="material-symbols-outlined text-white text-xl">upcoming</span>
                             </div>
-                            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-md">SCHEDULED</span>
+                            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-md group-hover:scale-105 transition-transform">SCHEDULED</span>
                         </div>
-                        <p className="text-3xl font-black text-[#1d0c0c]">{stats.upcoming}</p>
+                        <p className="text-3xl font-black text-[#1d0c0c] group-hover:text-blue-600 transition-colors">{stats.upcoming}</p>
                         <p className="text-sm text-[#6b4444] mt-0.5">Upcoming</p>
                     </div>
 
-                    <div className="stat-card bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)] border border-[#850000]/5 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all group cursor-default" style={{ transformStyle: 'preserve-3d' }}>
+                    <div className="stat-card bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/5 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(133,0,0,0.1)] hover:border-purple-200 transition-all duration-200 group cursor-default" style={{ transformStyle: 'preserve-3d' }}>
                         <div className="flex items-center justify-between mb-3">
-                            <div className="w-11 h-11 rounded-lg bg-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                            <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                                 <span className="material-symbols-outlined text-white text-xl">date_range</span>
                             </div>
-                            <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2.5 py-1 rounded-md">THIS WEEK</span>
+                            <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2.5 py-1 rounded-md group-hover:scale-105 transition-transform">THIS WEEK</span>
                         </div>
-                        <p className="text-3xl font-black text-[#1d0c0c]">{stats.week}</p>
+                        <p className="text-3xl font-black text-[#1d0c0c] group-hover:text-purple-600 transition-colors">{stats.week}</p>
                         <p className="text-sm text-[#6b4444] mt-0.5">This Week</p>
                     </div>
                 </div>
@@ -427,44 +423,47 @@ export default function DashboardPage() {
                                     const { day, time } = formatBookingTime(booking.slotTime);
                                     const isFirst = index === 0;
                                     return (
-                                        <div key={booking.$id} className={`booking-item flex items-center gap-4 px-6 py-4 hover:bg-[#850000]/[0.02] transition-colors ${isFirst ? 'bg-[#850000]/[0.03]' : ''}`}>
-                                            <div className={`h-12 w-12 rounded-lg flex items-center justify-center font-bold shrink-0 ${isFirst ? 'bg-[#850000] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-[#850000]/10 text-[#850000]'}`}>
+                                        <div key={booking.$id} className={`booking-item group flex items-center gap-4 px-6 py-4 hover:bg-gradient-to-r hover:from-[#850000]/[0.03] hover:to-transparent transition-all duration-200 cursor-pointer ${isFirst ? 'bg-gradient-to-r from-[#850000]/[0.05] to-transparent' : ''}`}>
+                                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center font-bold shrink-0 transition-all duration-200 group-hover:scale-105 ${isFirst ? 'bg-gradient-to-br from-[#850000] to-[#6b0000] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]' : 'bg-[#850000]/10 text-[#850000] group-hover:bg-[#850000]/15'}`}>
                                                 {booking.guestName.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <h4 className="font-semibold text-[#1d0c0c] truncate">{booking.guestName}</h4>
-                                                    {isFirst && <span className="text-[9px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-md">NEXT</span>}
+                                                    <h4 className="font-semibold text-[#1d0c0c] truncate group-hover:text-[#850000] transition-colors">{booking.guestName}</h4>
+                                                    {isFirst && <span className="text-[9px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-md animate-pulse">NEXT</span>}
                                                 </div>
                                                 <div className="flex items-center gap-3 mt-1">
-                                                    <span className="flex items-center gap-1 text-xs text-[#6b4444]">
-                                                        <span className="material-symbols-outlined text-sm">calendar_today</span>
+                                                    <span className="flex items-center gap-1.5 text-xs text-[#6b4444] group-hover:text-[#1d0c0c] transition-colors">
+                                                        <span className="material-symbols-outlined text-sm text-[#850000]/60">calendar_today</span>
                                                         {day}
                                                     </span>
-                                                    <span className="flex items-center gap-1 text-xs text-[#6b4444]">
-                                                        <span className="material-symbols-outlined text-sm">schedule</span>
+                                                    <span className="flex items-center gap-1.5 text-xs text-[#6b4444] group-hover:text-[#1d0c0c] transition-colors">
+                                                        <span className="material-symbols-outlined text-sm text-[#850000]/60">schedule</span>
                                                         {time}
                                                     </span>
                                                 </div>
                                             </div>
-                                            {isFirst && (
-                                                <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#850000] text-white text-sm font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                                            {isFirst ? (
+                                                <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#850000] to-[#6b0000] text-white text-sm font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none hover:from-[#6b0000] hover:to-[#4d0000] transition-all duration-200">
                                                     <span className="material-symbols-outlined text-lg">videocam</span>
-                                                    Join
+                                                    Join Call
                                                 </button>
+                                            ) : (
+                                                <span className="material-symbols-outlined text-[#6b4444]/30 group-hover:text-[#850000] transition-colors">chevron_right</span>
                                             )}
                                         </div>
                                     );
                                 })}
                             </div>
                         ) : (
-                            <div className="py-12 text-center">
-                                <div className="w-16 h-16 bg-[#850000]/10 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-[2px_2px_0px_0px_rgba(133,0,0,0.1)]">
-                                    <span className="material-symbols-outlined text-[#850000]/40 text-3xl">event_busy</span>
+                            <div className="py-14 text-center">
+                                <div className="w-20 h-20 bg-gradient-to-br from-[#850000]/10 to-[#850000]/5 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-[3px_3px_0px_0px_rgba(133,0,0,0.1)]">
+                                    <span className="material-symbols-outlined text-[#850000]/40 text-4xl">event_busy</span>
                                 </div>
-                                <h4 className="font-bold text-[#1d0c0c] mb-1">No upcoming bookings</h4>
-                                <p className="text-[#6b4444] text-sm mb-4">Share your link to get started!</p>
-                                <button onClick={handleCopyLink} className="px-5 py-2.5 rounded-lg bg-[#850000] text-white font-bold text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                                <h4 className="font-bold text-[#1d0c0c] mb-2 text-lg">No upcoming bookings</h4>
+                                <p className="text-[#6b4444] text-sm mb-5">Share your booking link to get started!</p>
+                                <button onClick={handleCopyLink} className="px-6 py-3 rounded-lg bg-gradient-to-r from-[#850000] to-[#6b0000] text-white font-bold text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)] hover:from-[#6b0000] hover:to-[#4d0000] transition-all duration-200 flex items-center gap-2 mx-auto">
+                                    <span className="material-symbols-outlined">content_copy</span>
                                     Copy Your Link
                                 </button>
                             </div>
@@ -473,31 +472,31 @@ export default function DashboardPage() {
 
                     {/* Quick Actions Sidebar */}
                     <div className="space-y-4">
-                        <div className="animate-section bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)] border border-[#850000]/5">
+                        <div className="animate-section bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/5 hover:shadow-[3px_3px_0px_0px_rgba(133,0,0,0.1)] transition-all duration-200">
                             <h3 className="font-bold text-[#1d0c0c] mb-4 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-[#850000]">bolt</span>
                                 Quick Actions
                             </h3>
                             <div className="space-y-2">
-                                <Link href="/dashboard/availability" className="action-item flex items-center gap-3 p-3 rounded-lg border border-[#850000]/5 hover:bg-[#850000]/5 transition-all group shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none">
-                                    <div className="w-9 h-9 rounded-lg bg-[#850000] flex items-center justify-center group-hover:scale-110 transition-transform shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">
+                                <Link href="/dashboard/availability" className="action-item flex items-center gap-3 p-3 rounded-xl border border-[#850000]/5 hover:bg-gradient-to-r hover:from-[#850000]/5 hover:to-transparent hover:border-[#850000]/15 transition-all duration-200 group shadow-[2px_2px_0px_0px_rgba(133,0,0,0.08)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none">
+                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">
                                         <span className="material-symbols-outlined text-white text-lg">schedule</span>
                                     </div>
                                     <div className="flex-1">
-                                        <p className="font-semibold text-sm text-[#1d0c0c]">Set Availability</p>
+                                        <p className="font-semibold text-sm text-[#1d0c0c] group-hover:text-[#850000] transition-colors">Set Availability</p>
                                         <p className="text-[11px] text-[#6b4444]">Define working hours</p>
                                     </div>
-                                    <span className="material-symbols-outlined text-[#6b4444]/30 group-hover:text-[#850000] transition-colors">chevron_right</span>
+                                    <span className="material-symbols-outlined text-[#6b4444]/30 group-hover:text-[#850000] group-hover:translate-x-1 transition-all">chevron_right</span>
                                 </Link>
-                                <Link href="/dashboard/settings" className="action-item flex items-center gap-3 p-3 rounded-lg border border-[#850000]/5 hover:bg-[#850000]/5 transition-all group shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none">
-                                    <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">
+                                <Link href="/dashboard/settings" className="action-item flex items-center gap-3 p-3 rounded-xl border border-[#850000]/5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent hover:border-blue-200 transition-all duration-200 group shadow-[2px_2px_0px_0px_rgba(133,0,0,0.08)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none">
+                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">
                                         <span className="material-symbols-outlined text-white text-lg">person</span>
                                     </div>
                                     <div className="flex-1">
-                                        <p className="font-semibold text-sm text-[#1d0c0c]">Edit Profile</p>
+                                        <p className="font-semibold text-sm text-[#1d0c0c] group-hover:text-blue-600 transition-colors">Edit Profile</p>
                                         <p className="text-[11px] text-[#6b4444]">Update your info</p>
                                     </div>
-                                    <span className="material-symbols-outlined text-[#6b4444]/30 group-hover:text-[#850000] transition-colors">chevron_right</span>
+                                    <span className="material-symbols-outlined text-[#6b4444]/30 group-hover:text-blue-600 group-hover:translate-x-1 transition-all">chevron_right</span>
                                 </Link>
                             </div>
                         </div>
@@ -518,20 +517,55 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
-                        {eventTypes.length > 0 && (
-                            <div className="animate-section bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)] border border-[#850000]/5">
-                                <p className="text-[10px] font-bold text-[#6b4444] uppercase tracking-wider mb-3">Active Event Type</p>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-11 h-11 rounded-lg flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]" style={{ backgroundColor: eventTypes[0].color || '#850000' }}>
-                                        <span className="material-symbols-outlined text-white text-xl">event</span>
+                        {/* Event Types Section */}
+                        <div className="animate-section bg-white rounded-xl shadow-[4px_4px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/5 overflow-hidden hover:shadow-[3px_3px_0px_0px_rgba(133,0,0,0.1)] transition-all duration-200">
+                            <div className="px-5 py-4 flex items-center justify-between border-b border-[#850000]/5 bg-gradient-to-r from-[#850000]/[0.02] to-transparent">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center shadow-[1px_1px_0px_0px_rgba(0,0,0,0.5)]">
+                                        <span className="material-symbols-outlined text-white text-base">event</span>
                                     </div>
-                                    <div>
-                                        <p className="font-bold text-[#1d0c0c]">{eventTypes[0].title}</p>
-                                        <p className="text-xs text-[#6b4444]">{eventTypes[0].duration} min</p>
-                                    </div>
+                                    <h3 className="font-bold text-[#1d0c0c]">Event Types</h3>
+                                    <span className="text-[10px] font-bold text-[#850000] bg-[#850000]/10 px-2 py-0.5 rounded-md">{eventTypes.length}/3</span>
                                 </div>
+                                <Link href="/dashboard/event-types" className="text-xs font-bold text-[#850000] hover:text-[#6b0000] flex items-center gap-1 transition-colors group">
+                                    Manage
+                                    <span className="material-symbols-outlined text-sm group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+                                </Link>
                             </div>
-                        )}
+                            <div className="divide-y divide-[#850000]/5">
+                                {eventTypes.length === 0 ? (
+                                    <div className="p-8 text-center">
+                                        <div className="w-14 h-14 bg-gradient-to-br from-[#850000]/10 to-[#850000]/5 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                            <span className="material-symbols-outlined text-[#850000]/40 text-3xl">add</span>
+                                        </div>
+                                        <p className="text-sm text-[#6b4444] mb-4">No event types yet</p>
+                                        <Link href="/dashboard/event-types" className="inline-flex items-center gap-1.5 text-sm font-bold text-white bg-gradient-to-r from-[#850000] to-[#6b0000] px-4 py-2 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all">
+                                            <span className="material-symbols-outlined text-base">add</span>
+                                            Create Event Type
+                                        </Link>
+                                    </div>
+                                ) : (
+                                    eventTypes.map((event) => (
+                                        <Link key={event.$id} href="/dashboard/event-types" className="flex items-center gap-3 px-5 py-3.5 hover:bg-gradient-to-r hover:from-[#850000]/[0.03] hover:to-transparent transition-all duration-200 group cursor-pointer">
+                                            <div
+                                                className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-105 shadow-[1px_1px_0px_0px_rgba(0,0,0,0.2)]"
+                                                style={{ backgroundColor: `${event.color}20`, color: event.color }}
+                                            >
+                                                <span className="material-symbols-outlined text-lg">videocam</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-sm text-[#1d0c0c] truncate group-hover:text-[#850000] transition-colors">{event.title}</p>
+                                                <p className="text-[11px] text-[#6b4444]">{event.duration} min</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full shrink-0 ${event.isActive ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-gray-300'}`} title={event.isActive ? 'Active' : 'Inactive'} />
+                                                <span className="material-symbols-outlined text-[#6b4444]/30 text-lg group-hover:text-[#850000] transition-colors">edit</span>
+                                            </div>
+                                        </Link>
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
