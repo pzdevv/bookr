@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { Logo } from '@/components/ui/logo';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -32,90 +33,180 @@ export default function HomePage() {
 
       heroTl
         .fromTo(badgeRef.current,
-          { opacity: 0, y: 20, scale: 0.9 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.6 }
+          { opacity: 0, y: 30, scale: 0.8 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.8 }
         )
         .fromTo(headingRef.current,
-          { opacity: 0, y: 40 },
-          { opacity: 1, y: 0, duration: 0.8 },
-          '-=0.3'
-        )
-        .fromTo(subtextRef.current,
-          { opacity: 0, y: 30 },
-          { opacity: 1, y: 0, duration: 0.6 },
+          { opacity: 0, y: 60, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 1 },
           '-=0.4'
         )
+        .fromTo(subtextRef.current,
+          { opacity: 0, y: 40 },
+          { opacity: 1, y: 0, duration: 0.8 },
+          '-=0.5'
+        )
         .fromTo(ctaRef.current,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.5 },
-          '-=0.3'
+          { opacity: 0, y: 30, scale: 0.9 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.6 },
+          '-=0.4'
         );
 
       // Floating badges animation
       if (floatingBadgesRef.current) {
         const badges = floatingBadgesRef.current.querySelectorAll('.floating-badge');
         gsap.fromTo(badges,
-          { opacity: 0, scale: 0.8, y: 30 },
+          { opacity: 0, scale: 0.6, y: 50, rotateZ: -5 },
           {
             opacity: 1,
             scale: 1,
             y: 0,
-            duration: 0.7,
-            stagger: 0.15,
+            rotateZ: 0,
+            duration: 0.9,
+            stagger: 0.2,
             delay: 0.8,
             ease: 'back.out(1.7)'
           }
         );
 
-        // Continuous floating animation
+        // Continuous floating animation - more noticeable
         badges.forEach((badge, i) => {
           gsap.to(badge, {
-            y: '+=10',
-            duration: 2 + i * 0.3,
+            y: '+=15',
+            rotateZ: i % 2 === 0 ? '+=2' : '-=2',
+            duration: 2.5 + i * 0.3,
             repeat: -1,
             yoyo: true,
             ease: 'sine.inOut',
-            delay: i * 0.2
+            delay: i * 0.3
           });
         });
       }
 
-      // Feature cards scroll animation
+      // Feature cards scroll animation - More dramatic, repeatable
       if (featuresRef.current) {
         const cards = featuresRef.current.querySelectorAll('.feature-card');
-        gsap.fromTo(cards,
-          { opacity: 0, y: 60, scale: 0.95 },
+        cards.forEach((card, index) => {
+          gsap.fromTo(card,
+            { opacity: 0, y: 100, scale: 0.85, rotateX: 10 },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              rotateX: 0,
+              duration: 0.8,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: card,
+                start: 'top 85%',
+                end: 'top 50%',
+                toggleActions: 'play reverse play reverse',
+                // Smooth animation that responds to scroll
+              }
+            }
+          );
+        });
+
+        // Section header animation
+        const sectionHeader = featuresRef.current.querySelector('h2');
+        if (sectionHeader) {
+          gsap.fromTo(sectionHeader,
+            { opacity: 0, y: 50, scale: 0.9 },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.8,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: sectionHeader,
+                start: 'top 80%',
+                toggleActions: 'play reverse play reverse'
+              }
+            }
+          );
+        }
+      }
+
+      // Workflow steps animation - More dramatic, staggered, repeatable
+      if (workflowRef.current) {
+        const steps = workflowRef.current.querySelectorAll('.workflow-step');
+        steps.forEach((step, index) => {
+          gsap.fromTo(step,
+            { opacity: 0, x: index % 2 === 0 ? -80 : 80, scale: 0.8, rotateY: index % 2 === 0 ? -15 : 15 },
+            {
+              opacity: 1,
+              x: 0,
+              scale: 1,
+              rotateY: 0,
+              duration: 0.9,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: step,
+                start: 'top 80%',
+                end: 'top 50%',
+                toggleActions: 'play reverse play reverse',
+              }
+            }
+          );
+        });
+
+        // Workflow section header
+        const workflowHeader = workflowRef.current.querySelector('h2');
+        if (workflowHeader) {
+          gsap.fromTo(workflowHeader,
+            { opacity: 0, y: 40, letterSpacing: '0.1em' },
+            {
+              opacity: 1,
+              y: 0,
+              letterSpacing: '0em',
+              duration: 0.8,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: workflowHeader,
+                start: 'top 85%',
+                toggleActions: 'play reverse play reverse'
+              }
+            }
+          );
+        }
+      }
+
+      // CTA section animation
+      const ctaSection = document.querySelector('#cta');
+      if (ctaSection) {
+        gsap.fromTo(ctaSection.querySelector('div'),
+          { opacity: 0, y: 80, scale: 0.9 },
           {
             opacity: 1,
             y: 0,
             scale: 1,
-            duration: 0.6,
-            stagger: 0.1,
-            ease: 'power2.out',
+            duration: 1,
+            ease: 'power3.out',
             scrollTrigger: {
-              trigger: featuresRef.current,
-              start: 'top 80%',
-              toggleActions: 'play none none reverse'
+              trigger: ctaSection,
+              start: 'top 75%',
+              toggleActions: 'play reverse play reverse'
             }
           }
         );
       }
 
-      // Workflow steps animation
-      if (workflowRef.current) {
-        const steps = workflowRef.current.querySelectorAll('.workflow-step');
-        gsap.fromTo(steps,
-          { opacity: 0, x: -40 },
+      // Companies section parallax effect
+      const companiesSection = document.querySelector('section.bg-white');
+      if (companiesSection) {
+        gsap.fromTo(companiesSection.querySelectorAll('div > div'),
+          { opacity: 0, y: 30 },
           {
-            opacity: 1,
-            x: 0,
-            duration: 0.7,
-            stagger: 0.2,
+            opacity: 0.3, // Keep original opacity
+            y: 0,
+            duration: 0.6,
+            stagger: 0.1,
             ease: 'power2.out',
             scrollTrigger: {
-              trigger: workflowRef.current,
-              start: 'top 75%',
-              toggleActions: 'play none none reverse'
+              trigger: companiesSection,
+              start: 'top 80%',
+              toggleActions: 'play reverse play reverse'
             }
           }
         );
@@ -133,12 +224,7 @@ export default function HomePage() {
       <div className="fixed top-6 left-0 right-0 z-50 px-4">
         <div className="max-w-[1100px] mx-auto">
           <header style={{ background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255, 255, 255, 0.4)' }} className="flex items-center justify-between px-8 py-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-[#850000] flex items-center justify-center rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                <span className="material-symbols-outlined text-white text-[20px]">calendar_month</span>
-              </div>
-              <h2 className="text-xl font-extrabold tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Book<span className="text-[#850000] italic" style={{ fontFamily: "'Playfair Display', serif" }}>&amp;</span>Call</h2>
-            </div>
+            <Logo size="sm" href="/" />
             <nav className="hidden md:flex items-center gap-10">
               <a className="text-slate-600 hover:text-[#850000] text-sm font-semibold transition-colors" href="#features">Features</a>
               <a className="text-slate-600 hover:text-[#850000] text-sm font-semibold transition-colors" href="#workflow">Workflow</a>
@@ -435,12 +521,7 @@ export default function HomePage() {
         <div className="max-w-[1100px] mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-20">
             <div className="flex flex-col gap-6">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-[#850000]/10 flex items-center justify-center rounded">
-                  <span className="material-symbols-outlined text-[#850000] text-xl font-bold">calendar_month</span>
-                </div>
-                <span className="text-xl font-black tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Book<span className="text-[#850000] italic" style={{ fontFamily: "'Playfair Display', serif" }}>&amp;</span>Call</span>
-              </div>
+              <Logo size="sm" href="/" />
               <p className="text-slate-400 font-medium max-w-xs leading-relaxed">Redefining how the world schedules meetings, one connection at a time.</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-16">

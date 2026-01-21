@@ -132,10 +132,13 @@ body {
 /* Form inputs - ensure visible text and no outlines */
 input,
 select,
-textarea,
-button {
+textarea {
   outline: none !important;
   color: #1c180c !important;
+}
+
+button {
+  outline: none !important;
 }
 
 input[type="time"],

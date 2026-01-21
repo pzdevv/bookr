@@ -10,8 +10,15 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Production domain for booking links
-const BOOKING_DOMAIN = 'bookncall.me';
+// Get booking URL base - uses current host for development, production domain for production
+const getBookingBaseUrl = () => {
+    if (typeof window === 'undefined') return '';
+    // Use current host for local development, production domain for production builds
+    const host = window.location.host;
+    return host.includes('localhost') || host.includes('127.0.0.1')
+        ? `${window.location.origin}/book`
+        : 'https://bookncall.me';
+};
 
 export default function DashboardPage() {
     const { userProfile, user, isLoading: authLoading, refreshUser } = useAuth();
@@ -147,83 +154,64 @@ export default function DashboardPage() {
                 );
             }
 
-            // Main Grid sections - Scroll-triggered animations
+            // Main Grid sections - Animate on load instead of scroll
             if (mainGridRef.current) {
                 const sections = mainGridRef.current.querySelectorAll('.animate-section');
 
-                sections.forEach((section, index) => {
-                    gsap.fromTo(section,
-                        {
-                            opacity: 0,
-                            y: 100,
-                            scale: 0.9,
-                            rotateX: 10
-                        },
-                        {
-                            opacity: 1,
-                            y: 0,
-                            scale: 1,
-                            rotateX: 0,
-                            duration: 1,
-                            ease: 'power3.out',
-                            scrollTrigger: {
-                                trigger: section,
-                                start: 'top 85%',
-                                end: 'top 40%',
-                                toggleActions: 'play none none reverse',
-                                // Smooth scrub for parallax effect
-                                // scrub: 1
-                            },
-                            delay: index * 0.1
-                        }
-                    );
-                });
-
-                // Booking items - staggered entrance
-                const bookingItems = mainGridRef.current.querySelectorAll('.booking-item');
-                gsap.fromTo(bookingItems,
+                gsap.fromTo(sections,
                     {
                         opacity: 0,
-                        x: -40,
+                        y: 50,
                         scale: 0.95
                     },
                     {
                         opacity: 1,
-                        x: 0,
+                        y: 0,
                         scale: 1,
-                        duration: 0.6,
-                        stagger: 0.1,
-                        ease: 'power2.out',
-                        scrollTrigger: {
-                            trigger: bookingItems[0],
-                            start: 'top 80%',
-                            toggleActions: 'play none none reverse'
-                        }
+                        duration: 0.8,
+                        stagger: 0.15,
+                        ease: 'power3.out',
+                        delay: 0.6
                     }
                 );
 
+                // Booking items - staggered entrance
+                const bookingItems = mainGridRef.current.querySelectorAll('.booking-item');
+                if (bookingItems.length > 0) {
+                    gsap.fromTo(bookingItems,
+                        {
+                            opacity: 0,
+                            x: -30
+                        },
+                        {
+                            opacity: 1,
+                            x: 0,
+                            duration: 0.5,
+                            stagger: 0.1,
+                            ease: 'power2.out',
+                            delay: 0.8
+                        }
+                    );
+                }
+
                 // Quick action items
                 const actionItems = mainGridRef.current.querySelectorAll('.action-item');
-                gsap.fromTo(actionItems,
-                    {
-                        opacity: 0,
-                        x: 50,
-                        rotateY: 15
-                    },
-                    {
-                        opacity: 1,
-                        x: 0,
-                        rotateY: 0,
-                        duration: 0.7,
-                        stagger: 0.12,
-                        ease: 'power3.out',
-                        scrollTrigger: {
-                            trigger: actionItems[0]?.parentElement,
-                            start: 'top 80%',
-                            toggleActions: 'play none none reverse'
+                if (actionItems.length > 0) {
+                    gsap.fromTo(actionItems,
+                        {
+                            opacity: 0,
+                            x: 30
+                        },
+                        {
+                            opacity: 1,
+                            x: 0,
+                            duration: 0.5,
+                            stagger: 0.1,
+                            ease: 'power2.out',
+                            delay: 0.9
                         }
-                    }
-                );
+                    );
+                }
             }
 
             // Parallax effect on scroll
@@ -255,8 +243,12 @@ export default function DashboardPage() {
         const slug = getUserSlug();
         if (!slug) return;
 
-        // Use the production domain
-        navigator.clipboard.writeText(`https://${BOOKING_DOMAIN}/${slug}`);
+        // Get dynamic booking URL
+        const baseUrl = getBookingBaseUrl();
+        const bookingUrl = baseUrl.includes('/book')
+            ? `${baseUrl}/${slug}`
+            : `${baseUrl}/${slug}`;
+        navigator.clipboard.writeText(bookingUrl);
         setCopied(true);
 
         // GSAP animation on copy
@@ -332,7 +324,7 @@ export default function DashboardPage() {
                         </h1>
                         <p className="text-[#6b4444] text-sm mt-1">Here's what's happening with your bookings</p>
                     </div>
-                    <Link href="/dashboard/settings" className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-[#850000]/10 shadow-[3px_3px_0px_0px_rgba(133,0,0,0.1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all text-sm font-medium text-[#4a2c2c]">
+                    <Link href="/dashboard/settings" className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-[#850000]/10 shadow-[3px_3px_0px_0px_rgba(133,0,0,0.1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all text-sm font-medium text-[#850000]">
                         <span className="material-symbols-outlined text-lg">settings</span>
                         Settings
                     </Link>
@@ -360,7 +352,7 @@ export default function DashboardPage() {
                                     LIVE
                                 </span>
                                 <code className="text-sm font-mono text-white/70 truncate max-w-[250px] lg:max-w-none">
-                                    {mounted && getUserSlug() ? `${BOOKING_DOMAIN}/${getUserSlug()}` : '...'}
+                                    {mounted && getUserSlug() ? `${getBookingBaseUrl().replace('https://', '').replace('http://', '').replace('/book', '')}/${getUserSlug()}` : '...'}
                                 </code>
                             </div>
                         </div>

@@ -9,9 +9,9 @@ interface LogoProps {
 }
 
 const sizeClasses = {
-    sm: { logo: 100, height: 24 },
-    md: { logo: 120, height: 32 },
-    lg: { logo: 160, height: 44 },
+    sm: { width: 160, height: 56 },
+    md: { width: 200, height: 64 },
+    lg: { width: 240, height: 80 },
 };
 
 export function Logo({ size = 'md', showText = true, variant = 'dark', href = '/' }: LogoProps) {
@@ -22,9 +22,10 @@ export function Logo({ size = 'md', showText = true, variant = 'dark', href = '/
             <Image
                 src="/logo.png"
                 alt="Bookr"
-                width={dimensions.logo}
+                width={dimensions.width}
                 height={dimensions.height}
-                className={`h-auto ${variant === 'light' ? 'brightness-0 invert' : ''}`}
+                className={`object-contain ${variant === 'light' ? 'brightness-0 invert' : ''}`}
+                style={{ maxHeight: dimensions.height, width: 'auto' }}
                 priority
             />
         </div>

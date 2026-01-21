@@ -19,8 +19,14 @@ const navItems = [
     { icon: 'settings', label: 'Settings', href: '/dashboard/settings' },
 ];
 
-// Production domain for booking links
-const BOOKING_DOMAIN = 'bookncall.me';
+// Get booking URL base - uses current host for development, production domain for production
+const getBookingBaseUrl = () => {
+    if (typeof window === 'undefined') return '';
+    const host = window.location.host;
+    return host.includes('localhost') || host.includes('127.0.0.1')
+        ? `${window.location.origin}/book`
+        : 'https://bookncall.me';
+};
 
 export function DashboardHeader() {
     return null;
@@ -74,8 +80,12 @@ export function DashboardSidebar({ isAdmin = false }: DashboardSidebarProps) {
         const slug = getUserSlug();
         if (!slug) return;
 
-        // Use the production domain for booking links
-        navigator.clipboard.writeText(`https://${BOOKING_DOMAIN}/${slug}`);
+        // Get dynamic booking URL
+        const baseUrl = getBookingBaseUrl();
+        const bookingUrl = baseUrl.includes('/book')
+            ? `${baseUrl}/${slug}`
+            : `${baseUrl}/${slug}`;
+        navigator.clipboard.writeText(bookingUrl);
         setCopied(true);
 
         // GSAP animation on copy
@@ -186,7 +196,7 @@ export function DashboardSidebar({ isAdmin = false }: DashboardSidebarProps) {
                         <span className="material-symbols-outlined text-lg">{copied ? 'check_circle' : 'link'}</span>
                         <span>{copied ? 'Copied!' : 'Copy Booking Link'}</span>
                     </button>
-                    <button onClick={handleSignOut} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#850000]/5 hover:bg-red-50 py-2.5 text-[#4a2c2c] hover:text-red-600 font-medium text-sm transition-all border border-[#850000]/10">
+                    <button onClick={handleSignOut} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#850000]/5 hover:bg-red-50 py-2.5 text-[#850000] hover:text-red-600 font-medium text-sm transition-all border border-[#850000]/10">
                         <span className="material-symbols-outlined text-lg">logout</span>
                         Sign Out
                     </button>
