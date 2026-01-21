@@ -539,8 +539,8 @@ export default function HomePage() {
               </div>
               <div className="flex flex-col gap-4">
                 <h5 className="font-bold text-slate-900">Legal</h5>
-                <a className="text-slate-500 hover:text-[#850000] transition-colors text-sm font-medium" href="#">Privacy</a>
-                <a className="text-slate-500 hover:text-[#850000] transition-colors text-sm font-medium" href="#">Terms</a>
+                <Link className="text-slate-500 hover:text-[#850000] transition-colors text-sm font-medium" href="/privacy-policy">Privacy Policy</Link>
+                <Link className="text-slate-500 hover:text-[#850000] transition-colors text-sm font-medium" href="/terms-of-service">Terms of Service</Link>
               </div>
             </div>
           </div>
