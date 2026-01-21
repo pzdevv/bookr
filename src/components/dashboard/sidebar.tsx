@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { Logo } from '@/components/ui/logo';
 import gsap from 'gsap';
 
 interface DashboardSidebarProps {
@@ -90,12 +91,7 @@ export function DashboardSidebar({ isAdmin = false }: DashboardSidebarProps) {
         <>
             {/* Mobile Header */}
             <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(133, 0, 0, 0.05)' }}>
-                <Link href="/dashboard" className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-[#850000] rounded-lg flex items-center justify-center shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                        <span className="material-symbols-outlined text-white text-lg">calendar_today</span>
-                    </div>
-                    <span className="font-bold text-lg text-[#1d0c0c]">Book<span className="text-[#850000] italic" style={{ fontFamily: "'Playfair Display', serif" }}>&</span>Call</span>
-                </Link>
+                <Logo size="sm" href="/dashboard" />
                 <button className="w-10 h-10 rounded-lg bg-[#850000]/5 flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                     <span className="material-symbols-outlined text-[#1d0c0c]">{isMobileMenuOpen ? 'close' : 'menu'}</span>
                 </button>
@@ -141,12 +137,7 @@ export function DashboardSidebar({ isAdmin = false }: DashboardSidebarProps) {
             <aside className="w-72 hidden md:flex flex-col fixed inset-y-0 left-0 z-40 bg-white border-r border-[#850000]/5">
                 {/* Logo */}
                 <div className="p-6 pb-2" ref={logoRef}>
-                    <Link href="/dashboard" className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 bg-[#850000] rounded-lg flex items-center justify-center shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                            <span className="material-symbols-outlined text-white text-[20px]">calendar_today</span>
-                        </div>
-                        <span className="font-bold text-xl text-[#1d0c0c]">Book<span className="text-[#850000] italic" style={{ fontFamily: "'Playfair Display', serif" }}>&</span>Call</span>
-                    </Link>
+                    <Logo size="md" href="/dashboard" />
                 </div>
 
                 {/* User Profile Mini */}
@@ -195,7 +186,7 @@ export function DashboardSidebar({ isAdmin = false }: DashboardSidebarProps) {
                         <span className="material-symbols-outlined text-lg">{copied ? 'check_circle' : 'link'}</span>
                         <span>{copied ? 'Copied!' : 'Copy Booking Link'}</span>
                     </button>
-                    <button onClick={handleSignOut} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#850000]/5 hover:bg-red-50 py-2.5 text-[#6b4444] hover:text-red-600 font-medium text-sm transition-all border border-[#850000]/10">
+                    <button onClick={handleSignOut} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#850000]/5 hover:bg-red-50 py-2.5 text-[#4a2c2c] hover:text-red-600 font-medium text-sm transition-all border border-[#850000]/10">
                         <span className="material-symbols-outlined text-lg">logout</span>
                         Sign Out
                     </button>

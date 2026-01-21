@@ -18,11 +18,13 @@ export const metadata: Metadata = {
   robots: "index, follow",
   icons: {
     icon: [
-      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
-      { url: "/favicon.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon-light.png", sizes: "32x32", type: "image/png", media: "(prefers-color-scheme: light)" },
+      { url: "/favicon-dark.png", sizes: "32x32", type: "image/png", media: "(prefers-color-scheme: dark)" },
+      { url: "/favicon-light.png", sizes: "192x192", type: "image/png", media: "(prefers-color-scheme: light)" },
+      { url: "/favicon-dark.png", sizes: "192x192", type: "image/png", media: "(prefers-color-scheme: dark)" },
     ],
-    apple: "/favicon.png",
-    shortcut: "/favicon.png",
+    apple: "/favicon-dark.png",
+    shortcut: "/favicon-dark.png",
   },
   manifest: "/manifest.json",
   openGraph: {

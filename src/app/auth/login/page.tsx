@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { gsap } from 'gsap';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { Logo } from '@/components/ui/logo';
 import { checkRateLimit, AUTH_RATE_LIMITS, formatResetTime } from '@/lib/security/rate-limit';
 
 export default function LoginPage() {
@@ -101,11 +102,8 @@ export default function LoginPage() {
 
             {/* Logo Header - Not sticky */}
             <div className="pt-8 pb-4 flex justify-center px-4">
-                <div className="auth-logo flex items-center gap-2">
-                    <div className="w-9 h-9 bg-[#850000] rounded-xl flex items-center justify-center text-white shadow-lg" style={{ boxShadow: '0 4px 14px rgba(133, 0, 0, 0.2)' }}>
-                        <span className="material-symbols-outlined text-[22px]">calendar_today</span>
-                    </div>
-                    <span className="font-bold text-xl tracking-tight text-[#1d0c0c]" style={{ fontFamily: "'Inter', sans-serif" }}>Book<span className="text-[#850000] italic" style={{ fontFamily: "'Playfair Display', serif" }}>&amp;</span>Call</span>
+                <div className="auth-logo">
+                    <Logo size="lg" href="/" />
                 </div>
             </div>
 

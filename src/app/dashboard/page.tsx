@@ -332,7 +332,7 @@ export default function DashboardPage() {
                         </h1>
                         <p className="text-[#6b4444] text-sm mt-1">Here's what's happening with your bookings</p>
                     </div>
-                    <Link href="/dashboard/settings" className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-[#850000]/10 shadow-[3px_3px_0px_0px_rgba(133,0,0,0.1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all text-sm font-medium text-[#6b4444]">
+                    <Link href="/dashboard/settings" className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white border border-[#850000]/10 shadow-[3px_3px_0px_0px_rgba(133,0,0,0.1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all text-sm font-medium text-[#4a2c2c]">
                         <span className="material-symbols-outlined text-lg">settings</span>
                         Settings
                     </Link>
