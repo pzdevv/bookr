@@ -110,7 +110,7 @@ function ResetPasswordForm() {
                     <div className="w-12 h-12 bg-gradient-to-br from-[#fbbd23] to-orange-400 rounded-2xl flex items-center justify-center shadow-lg">
                         <span className="material-symbols-outlined text-white text-2xl">key</span>
                     </div>
-                    <h2 className="text-2xl font-bold tracking-tight">Bookr</h2>
+                    <h2 className="text-2xl font-bold tracking-tight">Book&Call</h2>
                 </header>
 
                 <main className="auth-card w-full bg-white p-8 md:p-10 rounded-3xl shadow-2xl shadow-gray-200/50">
@@ -209,7 +209,7 @@ function ResetPasswordForm() {
                 </main>
 
                 <footer className="mt-8 text-center">
-                    <div className="text-gray-400 text-xs font-medium">© 2026 Bookr Inc.</div>
+                    <div className="text-gray-400 text-xs font-medium">© 2026 Book&Call Inc.</div>
                 </footer>
             </div>
         </div>

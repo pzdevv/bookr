@@ -46,7 +46,7 @@ export function LogoIcon({ size = 32, className = '' }: { size?: number; classNa
     return (
         <Image
             src="/favicon.png"
-            alt="Book&Call"
+            alt="Booker"
             width={size}
             height={size}
             className={`h-auto ${className}`}

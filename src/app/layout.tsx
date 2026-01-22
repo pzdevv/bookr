@@ -9,9 +9,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Book&Call - Modern Appointment Scheduling",
-  description: "Schedule appointments effortlessly with Book&Call. The modern scheduling platform for professionals with free audio calls.",
-  keywords: ["scheduling", "appointments", "booking", "calendar", "meetings", "audio calls", "free"],
+  title: "Book&Call - Professional Appointment Scheduling",
+  description: "Schedule appointments effortlessly with Book&Call. The premium scheduling platform for professionals available at bookncall.me. Features audio calls and smart calendar syncing.",
+  keywords: ["scheduling", "appointments", "booking", "calendar", "meetings", "audio calls", "free", "book&call", "bookncall", "bookncall.me", "book and call"],
   authors: [{ name: "Book&Call" }],
   creator: "Book&Call",
   publisher: "Book&Call",
@@ -30,22 +30,22 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://bookandcall.app",
+    url: "https://bookncall.me",
     siteName: "Book&Call",
-    title: "Book&Call - Modern Appointment Scheduling",
+    title: "Book&Call - Professional Appointment Scheduling",
     description: "Schedule appointments effortlessly with Book&Call. Free audio calls included.",
     images: [
       {
         url: "/logo.png",
         width: 1200,
         height: 630,
-        alt: "Book&Call - Modern Appointment Scheduling",
+        alt: "Book&Call - Professional Appointment Scheduling",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Book&Call - Modern Appointment Scheduling",
+    title: "Book&Call - Professional Appointment Scheduling",
     description: "Schedule appointments effortlessly with Book&Call. Free audio calls included.",
     images: ["/logo.png"],
   },
