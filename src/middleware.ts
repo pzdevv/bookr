@@ -24,7 +24,7 @@ export function middleware(request: NextRequest) {
     headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
     // Permissions Policy (restrict access to sensitive browser features)
-    headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self)');
+    headers.set('Permissions-Policy', 'camera=*, microphone=*, geolocation=*');
 
     // HSTS - Force HTTPS (enabled for production)
     headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
