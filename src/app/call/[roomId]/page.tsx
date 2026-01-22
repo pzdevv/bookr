@@ -78,6 +78,7 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         userName: userName || 'Guest',
         userId: userProfile?.$id || guestId,
         isHost,
+        bookingId: booking?.$id,
         mode: 'video',
         onCallEnded: async () => {
             if (booking && !hasMarkedEnded.current) {
@@ -155,11 +156,19 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         const loadNotesAndDocs = async () => {
             try {
                 if (callNotesService.isConfigured()) {
-                    const notesData = await callNotesService.getOrCreate(roomId, booking.userId, booking.guestEmail);
-                    setNotes(notesData);
-                    setSummary(notesData.summary || '');
-                    setDecisions(notesData.decisions || '');
-                    setActionItems(notesData.actionItems ? JSON.parse(notesData.actionItems) : []);
+                    let notesData;
+                    if (isHost) {
+                        notesData = await callNotesService.getOrCreate(roomId, booking.userId, booking.guestEmail);
+                    } else {
+                        notesData = await callNotesService.getByRoomId(roomId);
+                    }
+
+                    if (notesData) {
+                        setNotes(notesData);
+                        setSummary(notesData.summary || '');
+                        setDecisions(notesData.decisions || '');
+                        setActionItems(notesData.actionItems ? JSON.parse(notesData.actionItems) : []);
+                    }
                 }
 
                 if (callDocumentsService.isConfigured()) {

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Peer, { MediaConnection, DataConnection } from 'peerjs';
+import { bookingService, Booking } from '../appwrite/database';
+import { client, appwriteConfig } from '../appwrite/config';
 
 export type CallState = 'idle' | 'connecting' | 'waiting' | 'connected' | 'ended' | 'error';
 export type CallMode = 'audio' | 'video';
@@ -17,6 +19,7 @@ export interface ChatMessage {
 
 interface UseCallOptions {
     roomId: string;
+    bookingId?: string;
     userName: string;
     userId: string;
     mode?: CallMode;
@@ -42,7 +45,7 @@ interface UseCallReturn {
     sendMessage: (content: string) => void;
 }
 
-export function useCall({ roomId, userName, userId, isHost, mode = 'video', onCallEnded }: UseCallOptions & { isHost: boolean }): UseCallReturn {
+export function useCall({ roomId, bookingId, userName, userId, isHost, mode = 'video', onCallEnded }: UseCallOptions & { isHost: boolean }): UseCallReturn {
     const [callState, setCallState] = useState<CallState>('idle');
     const [callMode, setCallMode] = useState<CallMode>(mode);
     const [isMuted, setIsMuted] = useState(false);
@@ -202,6 +205,13 @@ export function useCall({ roomId, userName, userId, isHost, mode = 'video', onCa
     // Start call
     const startCall = useCallback(async () => {
         try {
+            if (!window.isSecureContext) {
+                const msg = 'Camera access requires a secure context (HTTPS or localhost)';
+                console.error(msg);
+                setError(msg);
+                setCallState('error');
+                return;
+            }
             setCallState('connecting');
             setError(null);
             setMessages([]);
@@ -224,76 +234,86 @@ export function useCall({ roomId, userName, userId, isHost, mode = 'video', onCa
             localStreamRef.current = stream;
             setLocalStream(stream);
 
-            const hostPeerId = `${roomId}-host`;
-            let peer: Peer;
-
-            if (isHost) {
-                // Host Logic: Claim specific ID
-                console.log('Initializing as HOST:', hostPeerId);
-                peer = new Peer(hostPeerId, { debug: 0, secure: true });
-
-                peer.on('error', (err) => {
-                    console.error('Peer error (Host):', err);
-                    if (err.type === 'unavailable-id') {
-                        setError('Host ID is currently active. Are you open in another tab?');
-                    } else {
-                        setError(err.message || 'Connection failed');
-                    }
-                    setCallState('error');
-                });
-            } else {
-                // Guest Logic: Random ID, Connect to Host
-                console.log('Initializing as GUEST to connect to:', hostPeerId);
-                const guestId = `${roomId}-guest-${Date.now().toString(36)}`;
-                peer = new Peer(guestId, { debug: 0, secure: true }); // Use explicit ID for debugging clarity
-
-                peer.on('error', (err) => {
-                    console.error('Peer error (Guest):', err);
-                    setError(err.message || 'Connection failed');
-                    setCallState('error');
-                });
-            }
+            // Use random ID for everyone to prevent "unavailable-id" errors
+            // We rely on Database Signaling to exchange IDs
+            const peer = new Peer({ debug: 0, secure: true });
 
             peerRef.current = peer;
 
-            peer.on('open', (id) => {
-                console.log('My Peer ID:', id);
-                setCallState('waiting');
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                setError(err.message || 'Connection failed');
+                setCallState('error');
+            });
 
-                if (!isHost) {
-                    // GUEST: Initiate Call immediately after open
-                    console.log('Guest calling Host...');
+            peer.on('open', async (id) => {
+                console.log('My Peer ID initialized:', id);
 
-                    // 1. Media Call
-                    if (localStreamRef.current) {
-                        const call = peer.call(hostPeerId, localStreamRef.current);
-                        callRef.current = call;
-
-                        call.on('stream', (remoteStr) => {
-                            console.log('Guest received remote stream');
-                            setRemoteStream(remoteStr);
-                            wasConnectedRef.current = true;
-                            setCallState('connected');
-                            startTimer();
-                        });
-
-                        call.on('close', () => endCall());
-                        call.on('error', (e) => {
-                            console.error('Call connection error:', e);
-                            // Don't fail immediately, retry or wait?
-                            // Signaling often takes a moment.
-                        });
+                if (isHost) {
+                    console.log('As HOST, updating booking with Peer ID...');
+                    setCallState('waiting');
+                    if (bookingId) {
+                        try {
+                            await bookingService.updateHostPeerId(bookingId, id);
+                        } catch (e) {
+                            console.error('Failed to update host ID:', e);
+                            setError('Signal error');
+                        }
                     }
+                } else {
+                    console.log('As GUEST, looking for Host Peer ID...');
 
-                    // 2. Data Connection
-                    const dataConn = peer.connect(hostPeerId, { reliable: true });
-                    setupDataConnection(dataConn);
+                    const connectToHost = (hostId: string) => {
+                        console.log('Connecting to Host:', hostId);
+                        if (localStreamRef.current) {
+                            const call = peer.call(hostId, localStreamRef.current);
+                            callRef.current = call;
+
+                            call.on('stream', (remoteStr) => {
+                                console.log('Guest received remote stream');
+                                setRemoteStream(remoteStr);
+                                wasConnectedRef.current = true;
+                                setCallState('connected');
+                                startTimer();
+                            });
+
+                            call.on('close', () => endCall());
+                            call.on('error', (e) => console.error('Call error:', e));
+                        }
+
+                        const dataConn = peer.connect(hostId, { reliable: true });
+                        setupDataConnection(dataConn);
+                    };
+
+                    if (bookingId) {
+                        // Check if host is already waiting
+                        const booking = await bookingService.get(bookingId);
+                        if (booking?.hostPeerId) {
+                            connectToHost(booking.hostPeerId);
+                        } else {
+                            console.log('Host not ready, subscribing to updates...');
+                            setCallState('waiting'); // Waiting for host
+                            const unsubscribe = client.subscribe(
+                                `databases.${appwriteConfig.databaseId}.collections.${appwriteConfig.collections.bookings}.documents.${bookingId}`,
+                                (response) => {
+                                    const payload = response.payload as Booking;
+                                    if (payload.hostPeerId) {
+                                        console.log('Host came online:', payload.hostPeerId);
+                                        connectToHost(payload.hostPeerId);
+                                        // unsubscribe(); // Kept active for now
+                                    }
+                                }
+                            );
+                        }
+                    }
                 }
             });
 
-            // HOST: Listen for incoming
-            peer.on('call', handleIncomingCall);
-            peer.on('connection', setupDataConnection);
+            // Host handles incoming
+            if (isHost) {
+                peer.on('call', handleIncomingCall);
+                peer.on('connection', setupDataConnection);
+            }
 
         } catch (err: any) {
             console.error('Failed to start call:', err);
@@ -306,7 +326,7 @@ export function useCall({ roomId, userName, userId, isHost, mode = 'video', onCa
             }
             setCallState('error');
         }
-    }, [roomId, callMode, isHost, handleIncomingCall, setupDataConnection, startTimer, endCall]);
+    }, [roomId, bookingId, callMode, isHost, handleIncomingCall, setupDataConnection, startTimer, endCall]);
 
     // Toggle mute
     const toggleMute = useCallback(() => {

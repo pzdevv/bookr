@@ -55,6 +55,7 @@ export interface Booking {
     callExpiry?: string; // ISO datetime when call link expires
     callPurpose?: string; // Purpose of the call
     expectedOutcome?: string; // Expected outcome
+    hostPeerId?: string; // Active Host Peer ID for signaling
     $createdAt: string;
     $updatedAt: string;
 }
@@ -425,6 +426,16 @@ export const bookingService = {
         } catch {
             return null;
         }
+    },
+
+    // Update active host peer ID for signaling
+    async updateHostPeerId(bookingId: string, peerId: string | null): Promise<void> {
+        await databases.updateDocument(
+            databaseId,
+            collections.bookings,
+            bookingId,
+            { hostPeerId: peerId }
+        );
     },
 };
 
