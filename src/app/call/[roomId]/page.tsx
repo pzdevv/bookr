@@ -77,6 +77,7 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         roomId,
         userName: userName || 'Guest',
         userId: userProfile?.$id || guestId,
+        isHost,
         mode: 'video',
         onCallEnded: async () => {
             if (booking && !hasMarkedEnded.current) {
@@ -515,45 +516,45 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                 </div>
 
                                 {/* Call Controls (Floating Bottom) */}
-                                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-black/60 backdrop-blur-xl rounded-full border border-white/10">
+                                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-black/60 backdrop-blur-xl rounded-full border border-white/10 z-50">
                                     <button
                                         onClick={toggleMute}
-                                        className={`p-4 rounded-full transition-colors ${isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
+                                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
                                             }`}
                                     >
-                                        <span className="material-symbols-outlined">{isMuted ? 'mic_off' : 'mic'}</span>
+                                        <span className="material-symbols-outlined text-2xl">{isMuted ? 'mic_off' : 'mic'}</span>
                                     </button>
                                     <button
                                         onClick={toggleVideo}
-                                        className={`p-4 rounded-full transition-colors ${isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
+                                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
                                             }`}
                                     >
-                                        <span className="material-symbols-outlined">{isVideoOff ? 'videocam_off' : 'videocam'}</span>
+                                        <span className="material-symbols-outlined text-2xl">{isVideoOff ? 'videocam_off' : 'videocam'}</span>
                                     </button>
                                     <button
                                         onClick={() => setShowChat(!showChat)}
-                                        className={`p-4 rounded-full transition-colors relative ${showChat ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20'
+                                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors relative ${showChat ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20'
                                             }`}
                                     >
-                                        <span className="material-symbols-outlined">chat</span>
+                                        <span className="material-symbols-outlined text-2xl">chat</span>
                                         {messages.length > 0 && !showChat && (
-                                            <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1d0c0c]" />
+                                            <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#1d0c0c]" />
                                         )}
                                     </button>
                                     {isHost && (
                                         <button
                                             onClick={() => setShowNotes(!showNotes)}
-                                            className={`p-4 rounded-full transition-colors ${showNotes ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20'
+                                            className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${showNotes ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20'
                                                 }`}
                                         >
-                                            <span className="material-symbols-outlined">edit_note</span>
+                                            <span className="material-symbols-outlined text-2xl">edit_note</span>
                                         </button>
                                     )}
                                     <button
                                         onClick={handleEndCall}
-                                        className="p-4 rounded-full bg-red-600 hover:bg-red-700 transition-colors ml-4"
+                                        className="w-14 h-14 rounded-full flex items-center justify-center bg-red-600 hover:bg-red-700 transition-colors ml-2"
                                     >
-                                        <span className="material-symbols-outlined">call_end</span>
+                                        <span className="material-symbols-outlined text-2xl">call_end</span>
                                     </button>
                                 </div>
                             </div>

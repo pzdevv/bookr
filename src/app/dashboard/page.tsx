@@ -444,10 +444,13 @@ export default function DashboardPage() {
                                                 </div>
                                             </div>
                                             {isFirst ? (
-                                                <button className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#850000] to-[#6b0000] text-white text-sm font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none hover:from-[#6b0000] hover:to-[#4d0000] transition-all duration-200">
+                                                <Link
+                                                    href={`/call/${booking.callRoomId}`}
+                                                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#850000] to-[#6b0000] text-white text-sm font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none hover:from-[#6b0000] hover:to-[#4d0000] transition-all duration-200"
+                                                >
                                                     <span className="material-symbols-outlined text-lg">videocam</span>
                                                     Join Call
-                                                </button>
+                                                </Link>
                                             ) : (
                                                 <span className="material-symbols-outlined text-[#6b4444]/30 group-hover:text-[#850000] transition-colors">chevron_right</span>
                                             )}

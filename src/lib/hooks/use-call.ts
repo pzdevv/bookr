@@ -42,7 +42,7 @@ interface UseCallReturn {
     sendMessage: (content: string) => void;
 }
 
-export function useCall({ roomId, userName, userId, mode = 'video', onCallEnded }: UseCallOptions): UseCallReturn {
+export function useCall({ roomId, userName, userId, isHost, mode = 'video', onCallEnded }: UseCallOptions & { isHost: boolean }): UseCallReturn {
     const [callState, setCallState] = useState<CallState>('idle');
     const [callMode, setCallMode] = useState<CallMode>(mode);
     const [isMuted, setIsMuted] = useState(false);
@@ -224,68 +224,74 @@ export function useCall({ roomId, userName, userId, mode = 'video', onCallEnded 
             localStreamRef.current = stream;
             setLocalStream(stream);
 
-            const peerId = `${roomId}-${Date.now().toString(36)}`;
             const hostPeerId = `${roomId}-host`;
+            let peer: Peer;
 
-            // Try to be host
-            const peer = new Peer(hostPeerId, {
-                debug: 0,
-                secure: true,
-            });
+            if (isHost) {
+                // Host Logic: Claim specific ID
+                console.log('Initializing as HOST:', hostPeerId);
+                peer = new Peer(hostPeerId, { debug: 0, secure: true });
+
+                peer.on('error', (err) => {
+                    console.error('Peer error (Host):', err);
+                    if (err.type === 'unavailable-id') {
+                        setError('Host ID is currently active. Are you open in another tab?');
+                    } else {
+                        setError(err.message || 'Connection failed');
+                    }
+                    setCallState('error');
+                });
+            } else {
+                // Guest Logic: Random ID, Connect to Host
+                console.log('Initializing as GUEST to connect to:', hostPeerId);
+                const guestId = `${roomId}-guest-${Date.now().toString(36)}`;
+                peer = new Peer(guestId, { debug: 0, secure: true }); // Use explicit ID for debugging clarity
+
+                peer.on('error', (err) => {
+                    console.error('Peer error (Guest):', err);
+                    setError(err.message || 'Connection failed');
+                    setCallState('error');
+                });
+            }
 
             peerRef.current = peer;
 
-            peer.on('error', async (err) => {
-                if (err.type === 'unavailable-id') {
-                    // We are guest
-                    peer.destroy();
+            peer.on('open', (id) => {
+                console.log('My Peer ID:', id);
+                setCallState('waiting');
 
-                    const guestPeer = new Peer(peerId, { debug: 0, secure: true });
-                    peerRef.current = guestPeer;
+                if (!isHost) {
+                    // GUEST: Initiate Call immediately after open
+                    console.log('Guest calling Host...');
 
-                    guestPeer.on('open', () => {
-                        // Connect media
-                        if (localStreamRef.current) {
-                            const call = guestPeer.call(hostPeerId, localStreamRef.current);
-                            callRef.current = call;
+                    // 1. Media Call
+                    if (localStreamRef.current) {
+                        const call = peer.call(hostPeerId, localStreamRef.current);
+                        callRef.current = call;
 
-                            call.on('stream', (remoteStr) => {
-                                console.log('Guest received remote stream');
-                                setRemoteStream(remoteStr);
-                                wasConnectedRef.current = true;
-                                setCallState('connected');
-                                startTimer();
-                            });
+                        call.on('stream', (remoteStr) => {
+                            console.log('Guest received remote stream');
+                            setRemoteStream(remoteStr);
+                            wasConnectedRef.current = true;
+                            setCallState('connected');
+                            startTimer();
+                        });
 
-                            call.on('close', () => endCall());
-                            call.on('error', (e) => {
-                                console.error('Call error:', e);
-                                setError('Failed to connect');
-                                setCallState('error');
-                            });
-                        }
+                        call.on('close', () => endCall());
+                        call.on('error', (e) => {
+                            console.error('Call connection error:', e);
+                            // Don't fail immediately, retry or wait?
+                            // Signaling often takes a moment.
+                        });
+                    }
 
-                        // Connect data channel
-                        const dataConn = guestPeer.connect(hostPeerId, { reliable: true });
-                        setupDataConnection(dataConn);
-                    });
-
-                    guestPeer.on('error', (e) => {
-                        console.error('Guest peer error:', e);
-                        setError('Connection failed');
-                        setCallState('error');
-                    });
-                } else {
-                    console.error('Peer error:', err);
-                    setError(err.message || 'Connection failed');
-                    setCallState('error');
+                    // 2. Data Connection
+                    const dataConn = peer.connect(hostPeerId, { reliable: true });
+                    setupDataConnection(dataConn);
                 }
             });
 
-            peer.on('open', () => {
-                setCallState('waiting');
-            });
-
+            // HOST: Listen for incoming
             peer.on('call', handleIncomingCall);
             peer.on('connection', setupDataConnection);
 
@@ -300,7 +306,7 @@ export function useCall({ roomId, userName, userId, mode = 'video', onCallEnded 
             }
             setCallState('error');
         }
-    }, [roomId, callMode, handleIncomingCall, setupDataConnection, startTimer, endCall]);
+    }, [roomId, callMode, isHost, handleIncomingCall, setupDataConnection, startTimer, endCall]);
 
     // Toggle mute
     const toggleMute = useCallback(() => {
