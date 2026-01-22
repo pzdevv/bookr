@@ -1,31 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  /* Yellow Primary Palette */
-  --primary: #FBBF24;
-  --primary-foreground: #1F2937;
-  --primary-hover: #F59E0B;
-  --primary-light: #FEF3C7;
-  --primary-dark: #D97706;
-
   /* Background & Foreground */
-  --background: #FAFAF8;
-  --foreground: #111827;
+  --background: #fcf8f8;
+  --foreground: #1d0c0c;
   --card: #FFFFFF;
-  --card-foreground: #111827;
+  --card-foreground: #1d0c0c;
+
+  /* Maroon Primary Palette (#850000) */
+  --primary: #850000;
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #6b0000;
+  --primary-light: #fdf2f2;
+  --primary-dark: #4a0000;
 
   /* Muted Colors */
-  --muted: #F3F4F6;
-  --muted-foreground: #6B7280;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b4444;
 
   /* Border & Input */
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: #FBBF24;
+  --border: rgba(133, 0, 0, 0.1);
+  --input: rgba(133, 0, 0, 0.1);
+  --ring: #850000;
 
   /* Accent */
-  --accent: #F3F4F6;
-  --accent-foreground: #111827;
+  --accent: #fcf8f8;
+  --accent-foreground: #1d0c0c;
 
   /* Destructive */
   --destructive: #EF4444;
@@ -36,37 +36,18 @@
   --success-foreground: #FFFFFF;
 
   /* Radius */
-  --radius: 0.75rem;
+  --radius: 1rem;
   --radius-sm: 0.5rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
+  --radius-lg: 1.5rem;
+  --radius-xl: 2rem;
+  --radius-2xl: 3rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary: #FBBF24;
-    --primary-foreground: #1F2937;
-    --primary-hover: #F59E0B;
-    --primary-light: #422006;
-    --primary-dark: #FCD34D;
-
-    --background: #0F0F0F;
-    --foreground: #F9FAFB;
-    --card: #1A1A1A;
-    --card-foreground: #F9FAFB;
-
-    --muted: #262626;
-    --muted-foreground: #9CA3AF;
-
-    --border: #333333;
-    --input: #333333;
-    --ring: #FBBF24;
-
-    --accent: #262626;
-    --accent-foreground: #F9FAFB;
-  }
-}
+/* 
+   Dark mode explicitly removed to enforce the requested "Light background with maroon accents" theme 
+   across all devices regardless of system preference.
+*/
+/* @media (prefers-color-scheme: dark) { ... } */
 
 @theme inline {
   --color-background: var(--background);

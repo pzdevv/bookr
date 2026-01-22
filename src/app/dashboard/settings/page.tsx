@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/layout';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { userService } from '@/lib/appwrite/database';
+import { sanitizeName, sanitizeSlug, sanitizeMultiline } from '@/lib/utils/sanitize';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -119,8 +120,17 @@ export default function SettingsPage() {
         setUsernameError('');
 
         try {
-            // Validate username format
-            const cleanUsername = username.toLowerCase().replace(/[^a-z0-9-]/g, '');
+            // Sanitize inputs
+            const cleanName = sanitizeName(name);
+            const cleanUsername = sanitizeSlug(username);
+            const cleanBio = sanitizeMultiline(bio, 500);
+
+            // Validate
+            if (cleanName.length < 2) {
+                setUsernameError('Name must be at least 2 characters');
+                setIsSaving(false);
+                return;
+            }
             if (cleanUsername.length < 3) {
                 setUsernameError('Username must be at least 3 characters');
                 setIsSaving(false);
@@ -136,9 +146,9 @@ export default function SettingsPage() {
             }
 
             await userService.update(userProfile.$id, {
-                name,
+                name: cleanName,
                 username: cleanUsername,
-                bio,
+                bio: cleanBio,
                 timezone
             });
             await refreshUser();

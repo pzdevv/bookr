@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { eventTypeService, EventType } from '@/lib/appwrite/database';
 import { COLORS, generateSlug } from '@/lib/utils';
+import { sanitizeText, sanitizeMultiline, sanitizeNumber, sanitizeColor } from '@/lib/utils/sanitize';
 
 const MAX_EVENTS = 3;
 const MIN_EVENTS = 1;
@@ -41,8 +42,30 @@ export default function EventTypesPage() {
             setError(`Maximum ${MAX_EVENTS} event types allowed`);
             return;
         }
+
+        // Sanitize inputs
+        const cleanTitle = sanitizeText(formData.title);
+        const cleanDescription = sanitizeMultiline(formData.description, 500);
+        const cleanDuration = sanitizeNumber(formData.duration, 15, 180);
+        const cleanBuffer = sanitizeNumber(formData.buffer, 0, 60);
+        const cleanColor = sanitizeColor(formData.color);
+
+        if (cleanTitle.length < 2) {
+            setError('Title must be at least 2 characters');
+            return;
+        }
+
         try {
-            await eventTypeService.create({ ...formData, userId: userProfile.$id, slug: generateSlug(formData.title), isActive: true });
+            await eventTypeService.create({
+                title: cleanTitle,
+                description: cleanDescription,
+                duration: cleanDuration,
+                buffer: cleanBuffer,
+                color: cleanColor,
+                userId: userProfile.$id,
+                slug: generateSlug(cleanTitle),
+                isActive: true
+            });
             loadEventTypes();
             setIsCreateDialogOpen(false);
             setFormData({ title: '', description: '', duration: 30, buffer: 0, color: COLORS[0].value });
@@ -52,18 +75,32 @@ export default function EventTypesPage() {
 
     const handleEdit = async () => {
         if (!selectedEventType) return;
+
+        // Sanitize inputs
+        const cleanTitle = sanitizeText(formData.title);
+        const cleanDescription = sanitizeMultiline(formData.description, 500);
+        const cleanDuration = sanitizeNumber(formData.duration, 15, 180);
+        const cleanBuffer = sanitizeNumber(formData.buffer, 0, 60);
+        const cleanColor = sanitizeColor(formData.color);
+
+        if (cleanTitle.length < 2) {
+            setError('Title must be at least 2 characters');
+            return;
+        }
+
         try {
             await eventTypeService.update(selectedEventType.$id, {
-                title: formData.title,
-                description: formData.description,
-                duration: formData.duration,
-                buffer: formData.buffer,
-                color: formData.color,
-                slug: generateSlug(formData.title)
+                title: cleanTitle,
+                description: cleanDescription,
+                duration: cleanDuration,
+                buffer: cleanBuffer,
+                color: cleanColor,
+                slug: generateSlug(cleanTitle)
             });
             loadEventTypes();
             setIsEditDialogOpen(false);
             setSelectedEventType(null);
+            setError('');
         } catch (error) { console.error('Error:', error); }
     };
 

@@ -7,6 +7,7 @@ import { use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventTypeService, availabilityService, bookingService, userService, generateCallRoomId, EventType, Availability, User } from '@/lib/appwrite/database';
 import { formatTime, getTimeSlots, getUserTimezone } from '@/lib/utils';
+import { sanitizeName, sanitizeEmail, sanitizeMultiline } from '@/lib/utils/sanitize';
 import { Logo } from '@/components/ui/logo';
 
 export default function BookEventPage({ params }: { params: Promise<{ username: string; eventSlug: string }> }) {
@@ -108,17 +109,23 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
             }
 
             const callRoomId = generateCallRoomId();
+
+            // Sanitize inputs
+            const cleanName = sanitizeName(formData.name);
+            const cleanEmail = sanitizeEmail(formData.email);
+            const cleanNotes = sanitizeMultiline(formData.notes, 1000);
+
             await bookingService.create({
                 userId: user.$id,
                 eventTypeId: eventType.$id,
-                guestName: formData.name.trim(),
-                guestEmail: formData.email.trim().toLowerCase(),
+                guestName: cleanName,
+                guestEmail: cleanEmail,
                 slotTime: slotDateTime.toISOString(),
                 status: 'confirmed',
-                notes: formData.notes.trim(),
+                notes: cleanNotes,
                 callRoomId,
             });
-            router.push(`/book/${username}/${eventSlug}/confirm?date=${slotDateTime.toISOString()}&name=${encodeURIComponent(formData.name)}&duration=${eventType.duration}&room=${callRoomId}`);
+            router.push(`/book/${username}/${eventSlug}/confirm?date=${slotDateTime.toISOString()}&name=${encodeURIComponent(cleanName)}&duration=${eventType.duration}&room=${callRoomId}`);
         } catch (err) {
             console.error('Error booking:', err);
             setError('Failed to create booking. Please try again.');

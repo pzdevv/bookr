@@ -3,11 +3,15 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { sanitizeName } from '@/lib/utils/sanitize';
 
 function ConfirmContent() {
     const searchParams = useSearchParams();
     const date = searchParams.get('date');
-    const name = searchParams.get('name');
+    const rawName = searchParams.get('name');
+    // Sanitize name fro URL
+    const name = sanitizeName(rawName);
+
     const duration = parseInt(searchParams.get('duration') || '30');
     const roomId = searchParams.get('room');
     const [copied, setCopied] = useState(false);

@@ -19,6 +19,8 @@ export default function CallHistoryPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [filter, setFilter] = useState<'all' | 'with_notes' | 'with_docs'>('all');
+    const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     useEffect(() => {
         const loadCallHistory = async () => {
@@ -51,11 +53,6 @@ export default function CallHistoryPage() {
                     })
                 );
 
-                // Sort by date descending
-                records.sort((a, b) =>
-                    new Date(b.booking.slotTime).getTime() - new Date(a.booking.slotTime).getTime()
-                );
-
                 setCallRecords(records);
             } catch (err) {
                 console.error('Error loading call history:', err);
@@ -67,11 +64,26 @@ export default function CallHistoryPage() {
         loadCallHistory();
     }, [userProfile?.$id]);
 
-    const filteredRecords = callRecords.filter(record => {
-        if (filter === 'with_notes') return record.notes?.summary || record.notes?.decisions;
-        if (filter === 'with_docs') return record.documents.length > 0;
-        return true;
-    });
+    // Sorting and Filtering
+    const processedRecords = callRecords
+        .filter(record => {
+            if (filter === 'with_notes') return record.notes?.summary || record.notes?.decisions;
+            if (filter === 'with_docs') return record.documents.length > 0;
+            return true;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'date') {
+                const dateA = new Date(a.booking.slotTime).getTime();
+                const dateB = new Date(b.booking.slotTime).getTime();
+                return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+            } else {
+                const nameA = a.booking.guestName.toLowerCase();
+                const nameB = b.booking.guestName.toLowerCase();
+                return sortOrder === 'asc'
+                    ? nameA.localeCompare(nameB)
+                    : nameB.localeCompare(nameA);
+            }
+        });
 
     const getFileIcon = (fileType: string) => {
         if (fileType.includes('pdf')) return 'picture_as_pdf';
@@ -106,9 +118,18 @@ export default function CallHistoryPage() {
         }
     };
 
+    const toggleSort = (key: 'date' | 'name') => {
+        if (sortBy === key) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(key);
+            setSortOrder('desc'); // Default to desc for both initially
+        }
+    };
+
     if (isLoading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
+            <div className="min-h-[60vh] flex items-center justify-center bg-[#fcf8f8]">
                 <div className="text-center">
                     <div className="w-12 h-12 border-3 border-[#850000] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                     <p className="text-[#6b4444]">Loading call history...</p>
@@ -118,56 +139,91 @@ export default function CallHistoryPage() {
     }
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="p-6 max-w-4xl mx-auto bg-[#fcf8f8] min-h-screen text-[#1d0c0c]">
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-[#1d0c0c] mb-2">Call History</h1>
                 <p className="text-[#6b4444]">Review your past calls, notes, and shared documents</p>
             </div>
 
-            {/* Filters */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-                <button
-                    onClick={() => setFilter('all')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'all'
+            {/* Controls */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-start md:items-center">
+                {/* Filters */}
+                <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
+                    <button
+                        onClick={() => setFilter('all')}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'all'
                             ? 'bg-[#850000] text-white shadow-lg'
                             : 'bg-white text-[#6b4444] border border-[#850000]/10 hover:border-[#850000]/30'
-                        }`}
-                >
-                    All Calls ({callRecords.length})
-                </button>
-                <button
-                    onClick={() => setFilter('with_notes')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'with_notes'
+                            }`}
+                    >
+                        All Calls ({callRecords.length})
+                    </button>
+                    <button
+                        onClick={() => setFilter('with_notes')}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'with_notes'
                             ? 'bg-[#850000] text-white shadow-lg'
                             : 'bg-white text-[#6b4444] border border-[#850000]/10 hover:border-[#850000]/30'
-                        }`}
-                >
-                    <span className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-base">notes</span>
-                        With Notes
-                    </span>
-                </button>
-                <button
-                    onClick={() => setFilter('with_docs')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'with_docs'
+                            }`}
+                    >
+                        <span className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-base">notes</span>
+                            With Notes
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setFilter('with_docs')}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'with_docs'
                             ? 'bg-[#850000] text-white shadow-lg'
                             : 'bg-white text-[#6b4444] border border-[#850000]/10 hover:border-[#850000]/30'
-                        }`}
-                >
-                    <span className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-base">folder</span>
-                        With Documents
-                    </span>
-                </button>
+                            }`}
+                    >
+                        <span className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-base">folder</span>
+                            With Documents
+                        </span>
+                    </button>
+                </div>
+
+                {/* Sorting */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => toggleSort('date')}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1 ${sortBy === 'date'
+                            ? 'bg-[#850000]/10 text-[#850000] border border-[#850000]/20'
+                            : 'bg-white text-[#6b4444] border border-[#850000]/10'
+                            }`}
+                    >
+                        Date
+                        {sortBy === 'date' && (
+                            <span className="material-symbols-outlined text-sm">
+                                {sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => toggleSort('name')}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1 ${sortBy === 'name'
+                            ? 'bg-[#850000]/10 text-[#850000] border border-[#850000]/20'
+                            : 'bg-white text-[#6b4444] border border-[#850000]/10'
+                            }`}
+                    >
+                        Name
+                        {sortBy === 'name' && (
+                            <span className="material-symbols-outlined text-sm">
+                                {sortOrder === 'asc' ? 'arrow_downward' : 'arrow_upward'}
+                            </span>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Empty State */}
-            {filteredRecords.length === 0 ? (
+            {processedRecords.length === 0 ? (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl border border-[#850000]/10 p-12 text-center"
+                    className="bg-white rounded-2xl border border-[#850000]/10 p-12 text-center shadow-sm"
                 >
                     <div className="w-20 h-20 bg-[#850000]/5 rounded-2xl flex items-center justify-center mx-auto mb-6">
                         <span className="material-symbols-outlined text-[#850000] text-4xl">history</span>
@@ -184,7 +240,7 @@ export default function CallHistoryPage() {
                 </motion.div>
             ) : (
                 <div className="space-y-4">
-                    {filteredRecords.map((record, index) => {
+                    {processedRecords.map((record, index) => {
                         const isExpanded = expandedId === record.booking.$id;
                         const duration = calculateDuration(record.booking.callStartedAt, record.booking.callEndedAt);
                         const actionItems = parseActionItems(record.notes?.actionItems);

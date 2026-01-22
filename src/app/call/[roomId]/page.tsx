@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAudioCall, formatCallDuration } from '@/lib/hooks/use-audio-call';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { bookingService, userService, eventTypeService, markCallStarted, markCallEnded, isCallExpired, callNotesService, callDocumentsService, Booking, User, EventType, CallNotes, CallDocument, ActionItem } from '@/lib/appwrite/database';
+import { sanitizeMultiline, sanitizeText } from '@/lib/utils/sanitize';
 import { Logo } from '@/components/ui/logo';
 
 export default function CallPage({ params }: { params: Promise<{ roomId: string }> }) {
@@ -170,8 +171,8 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         setIsSaving(true);
         try {
             await callNotesService.update(notes.$id, {
-                summary,
-                decisions,
+                summary: sanitizeMultiline(summary, 2000),
+                decisions: sanitizeMultiline(decisions, 2000),
                 actionItems: JSON.stringify(actionItems),
             });
         } catch (err) {
@@ -182,8 +183,9 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
     };
 
     const addActionItem = () => {
-        if (!newActionText.trim()) return;
-        setActionItems([...actionItems, { text: newActionText.trim(), assignedTo: 'host', completed: false }]);
+        const cleanText = sanitizeText(newActionText);
+        if (!cleanText) return;
+        setActionItems([...actionItems, { text: cleanText, assignedTo: 'host', completed: false }]);
         setNewActionText('');
     };
 
@@ -452,8 +454,8 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                 {/* Avatar with Status Ring */}
                                 <motion.div
                                     className={`w-32 h-32 rounded-full mx-auto mb-6 flex items-center justify-center ${callState === 'connected'
-                                            ? 'bg-gradient-to-br from-green-400 to-green-500 ring-4 ring-green-200'
-                                            : 'bg-gradient-to-br from-[#850000] to-[#6b0000]'
+                                        ? 'bg-gradient-to-br from-green-400 to-green-500 ring-4 ring-green-200'
+                                        : 'bg-gradient-to-br from-[#850000] to-[#6b0000]'
                                         }`}
                                     animate={callState === 'waiting' ? { scale: [1, 1.05, 1] } : {}}
                                     transition={{ repeat: Infinity, duration: 2 }}
@@ -468,8 +470,8 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                 </h2>
 
                                 <p className={`text-sm font-medium mb-8 ${callState === 'connected' ? 'text-green-600' :
-                                        callState === 'waiting' ? 'text-[#850000]' :
-                                            callState === 'error' ? 'text-red-600' : 'text-[#6b4444]'
+                                    callState === 'waiting' ? 'text-[#850000]' :
+                                        callState === 'error' ? 'text-red-600' : 'text-[#6b4444]'
                                     }`}>
                                     {callState === 'connecting' && 'Connecting...'}
                                     {callState === 'waiting' && 'Waiting for others...'}
@@ -498,8 +500,8 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                         whileTap={{ scale: 0.9 }}
                                         onClick={toggleMute}
                                         className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${isMuted
-                                                ? 'bg-red-100 text-red-600'
-                                                : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'
+                                            ? 'bg-red-100 text-red-600'
+                                            : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'
                                             }`}
                                     >
                                         <span className="material-symbols-outlined text-2xl">
@@ -521,8 +523,8 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                         whileTap={{ scale: 0.9 }}
                                         onClick={toggleSpeakerMode}
                                         className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${speakerMode
-                                                ? 'bg-[#850000] text-white'
-                                                : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'
+                                            ? 'bg-[#850000] text-white'
+                                            : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'
                                             }`}
                                         title={speakerMode ? 'Speaker On' : 'Earpiece Mode'}
                                     >
