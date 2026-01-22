@@ -230,7 +230,23 @@ export function useCall({ roomId, bookingId, userName, userId, isHost, mode = 'v
                 } : false,
             };
 
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            // Retry logic for media stream
+            let stream: MediaStream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (err) {
+                console.warn('High-quality constraints failed, retrying with basic config:', err);
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                        video: callMode === 'video'
+                    });
+                } catch (retryErr) {
+                    // Propagate the original error or the retry error
+                    throw retryErr;
+                }
+            }
+
             localStreamRef.current = stream;
             setLocalStream(stream);
 
