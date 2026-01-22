@@ -277,17 +277,17 @@ export default function HomePage() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#850000] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#850000]"></span>
               </span>
-              Now Smarter Than Ever
+              Now with real-time chats
             </div>
             <h1 ref={headingRef} className="text-5xl md:text-7xl font-extrabold leading-[1.05] tracking-tight mb-8 max-w-4xl mx-auto" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               Scheduling made <span className="italic text-[#850000] font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>effortless</span> for high-performers.
             </h1>
             <p ref={subtextRef} className="text-slate-500 text-lg md:text-xl font-medium max-w-2xl mx-auto mb-12">
-              The premium platform for seamless appointments. Reclaim your focus and let <span className="text-[#850000] font-bold">Book&amp;Call</span> handle the logistics.
+              The all-in-one platform for seamless appointments. Reclaim your focus and let <span className="text-[#850000] font-bold">Book&amp;Call</span> handle the logistics.
             </p>
             <div ref={ctaRef} className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-20">
               <Link href="/auth/signup" className="w-full sm:w-auto min-w-[200px] bg-[#850000] text-white text-lg font-bold h-16 px-10 rounded-xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center">
-                Start Free Trial
+                Start Free
               </Link>
             </div>
 
@@ -318,7 +318,7 @@ export default function HomePage() {
               {/* Floating Badge - Left Bottom */}
               <div className="floating-badge absolute bottom-36 left-4 md:left-8 bg-slate-900 rounded-2xl shadow-xl p-4 z-30 hidden sm:flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                <span className="text-xs font-bold text-white">100% Free Forever</span>
+                <span className="text-xs font-bold text-white">100% Free Forever*</span>
               </div>
 
               {/* Calendar Modal */}
@@ -433,8 +433,8 @@ export default function HomePage() {
                   <span className="material-symbols-outlined text-3xl">brush</span>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <h3 className="text-xl font-bold">Premium Branding</h3>
-                  <p className="text-slate-500 leading-relaxed">Your brand, front and center. Custom CSS, domains, and white-labeled emails.</p>
+                  <h3 className="text-xl font-bold">Multiple Events</h3>
+                  <p className="text-slate-500 leading-relaxed">Your events, your way. Create and manage multiple events with ease.</p>
                 </div>
               </div>
               {/* Feature Card 3 */}
@@ -444,7 +444,7 @@ export default function HomePage() {
                 </div>
                 <div className="flex flex-col gap-3">
                   <h3 className="text-xl font-bold">Omni-Sync</h3>
-                  <p className="text-slate-500 leading-relaxed">Sync Google, Outlook, and iCloud simultaneously to prevent any scheduling conflicts.</p>
+                  <p className="text-slate-500 leading-relaxed">Sync Google Calendar, Notion, and other calendars simultaneously to prevent any scheduling conflicts.</p>
                 </div>
               </div>
               {/* Feature Card 4 */}
@@ -454,7 +454,7 @@ export default function HomePage() {
                 </div>
                 <div className="flex flex-col gap-3">
                   <h3 className="text-xl font-bold">Instant Payments</h3>
-                  <p className="text-slate-500 leading-relaxed">Collect payments via Stripe before the meeting starts. Professional and secure.</p>
+                  <p className="text-slate-500 leading-relaxed">Collect payments via your own QR before the meeting starts. Professional and secure.</p>
                 </div>
               </div>
               {/* Feature Card 5 - Wide */}
@@ -482,7 +482,7 @@ export default function HomePage() {
                 <div className="workflow-step flex flex-col items-center text-center gap-6 group">
                   <div className="w-20 h-20 rounded-2xl bg-white flex items-center justify-center text-3xl font-black text-[#850000] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:bg-[#850000] group-hover:text-white transition-all" style={{ border: '2px solid #850000' }}>1</div>
                   <h4 className="text-2xl font-bold">Integrate</h4>
-                  <p className="text-slate-500 font-medium">Connect your favorite calendar providers in under 30 seconds.</p>
+                  <p className="text-slate-500 font-medium">Connect your favorite calendar providers.</p>
                 </div>
                 <div className="workflow-step flex flex-col items-center text-center gap-6 group">
                   <div className="w-20 h-20 rounded-2xl bg-white flex items-center justify-center text-3xl font-black text-[#850000] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] group-hover:bg-[#850000] group-hover:text-white transition-all" style={{ border: '2px solid #850000' }}>2</div>
