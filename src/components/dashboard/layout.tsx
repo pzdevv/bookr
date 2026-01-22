@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardSidebar } from './sidebar';
 import { useAuth } from '@/lib/hooks/use-auth';
@@ -13,6 +13,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, isAdmin = false }: DashboardLayoutProps) {
     const router = useRouter();
     const { user, isLoading } = useAuth();
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     useEffect(() => {
         if (!isLoading && !user) {
@@ -36,8 +37,12 @@ export function DashboardLayout({ children, isAdmin = false }: DashboardLayoutPr
 
     return (
         <div className="flex h-screen overflow-hidden bg-[#fcf8f8]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
-            <DashboardSidebar isAdmin={isAdmin} />
-            <main className="flex-1 overflow-y-auto md:ml-72 pt-16 md:pt-0">
+            <DashboardSidebar
+                isAdmin={isAdmin}
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
+            <main className={`flex-1 overflow-y-auto pt-16 md:pt-0 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-72'}`}>
                 {children}
             </main>
         </div>

@@ -553,10 +553,11 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                             <AnimatePresence>
                                 {(showChat || (showNotes && isHost)) && (
                                     <motion.div
-                                        initial={{ width: 0, opacity: 0 }}
-                                        animate={{ width: 360, opacity: 1 }}
-                                        exit={{ width: 0, opacity: 0 }}
-                                        className="border-l border-white/10 bg-[#1d0c0c]/95 backdrop-blur-xl flex flex-col"
+                                        initial={{ x: '100%' }}
+                                        animate={{ x: 0 }}
+                                        exit={{ x: '100%' }}
+                                        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                                        className="absolute inset-y-0 right-0 w-full md:w-[360px] border-l border-white/10 bg-[#1d0c0c] z-[60] shadow-2xl flex flex-col"
                                     >
                                         {/* Header */}
                                         <div className="p-4 border-b border-white/10 flex items-center justify-between">
@@ -565,7 +566,7 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                             </h3>
                                             <button
                                                 onClick={() => { setShowChat(false); setShowNotes(false); }}
-                                                className="hover:bg-white/10 p-1 rounded-lg"
+                                                className="text-white/40 hover:text-white transition-colors"
                                             >
                                                 <span className="material-symbols-outlined">close</span>
                                             </button>
@@ -623,9 +624,9 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                                                 setChatMessage('');
                                                             }}
                                                             disabled={!chatMessage.trim()}
-                                                            className="p-2 bg-[#850000] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#6b0000] transition-colors"
+                                                            className="text-[#850000] disabled:text-gray-500 hover:text-[#6b0000] transition-colors p-2"
                                                         >
-                                                            <span className="material-symbols-outlined text-sm">send</span>
+                                                            <span className="material-symbols-outlined text-xl">send</span>
                                                         </button>
                                                     </div>
                                                 </div>
