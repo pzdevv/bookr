@@ -261,8 +261,8 @@ export default function EventTypesPage() {
                                                 <span>{event.duration} minutes</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-xs text-[#6b4444]">
-                                                <span className="material-symbols-outlined text-[16px]">videocam</span>
-                                                <span>Video Call</span>
+                                                <span className="material-symbols-outlined text-[16px]">call</span>
+                                                <span>Audio Call</span>
                                             </div>
                                         </div>
                                     </div>

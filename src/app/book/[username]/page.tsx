@@ -131,8 +131,8 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
                                                     {event.duration} min
                                                 </span>
                                                 <span className="flex items-center gap-2 text-sm text-[#6b4444]">
-                                                    <span className="material-symbols-outlined text-[#850000] text-lg">videocam</span>
-                                                    Video call
+                                                    <span className="material-symbols-outlined text-[#850000] text-lg">call</span>
+                                                    Audio call
                                                 </span>
                                             </div>
                                         </div>

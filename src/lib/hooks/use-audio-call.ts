@@ -117,9 +117,12 @@ export function useAudioCall({ roomId, userName, onCallEnded }: UseAudioCallOpti
         callRef.current = call;
         setRemotePeerId(call.peer);
 
+
         call.on('stream', (remoteStream) => {
+            console.log('Received remote stream');
             if (remoteAudioRef.current) {
                 remoteAudioRef.current.srcObject = remoteStream;
+                remoteAudioRef.current.play().catch(e => console.error('Error playing remote audio:', e));
             }
             wasConnectedRef.current = true;
             setCallState('connected');
@@ -127,6 +130,7 @@ export function useAudioCall({ roomId, userName, onCallEnded }: UseAudioCallOpti
         });
 
         call.on('close', () => {
+            console.log('Call closed');
             endCall();
         });
 
@@ -138,7 +142,10 @@ export function useAudioCall({ roomId, userName, onCallEnded }: UseAudioCallOpti
 
         // Answer with local stream
         if (localStreamRef.current) {
+            console.log('Answering call with local stream');
             call.answer(localStreamRef.current);
+        } else {
+            console.warn('No local stream to answer with');
         }
     }, [startTimer, endCall]);
 
@@ -186,8 +193,10 @@ export function useAudioCall({ roomId, userName, onCallEnded }: UseAudioCallOpti
                             callRef.current = call;
 
                             call.on('stream', (remoteStream) => {
+                                console.log('Caller received remote stream');
                                 if (remoteAudioRef.current) {
                                     remoteAudioRef.current.srcObject = remoteStream;
+                                    remoteAudioRef.current.play().catch(e => console.error('Error playing remote audio:', e));
                                 }
                                 wasConnectedRef.current = true;
                                 setCallState('connected');
@@ -195,6 +204,7 @@ export function useAudioCall({ roomId, userName, onCallEnded }: UseAudioCallOpti
                             });
 
                             call.on('close', () => {
+                                console.log('Caller connection closed');
                                 endCall();
                             });
 

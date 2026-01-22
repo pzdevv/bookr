@@ -255,7 +255,7 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                                         <div className="space-y-2.5">
                                             {[
                                                 { icon: 'schedule', label: `${eventType.duration} min`, color: 'text-[#850000]', bg: 'bg-[#850000]/10' },
-                                                { icon: 'videocam', label: 'Video Call', color: 'text-blue-600', bg: 'bg-blue-50' },
+                                                { icon: 'call', label: 'Audio Call', color: 'text-blue-600', bg: 'bg-blue-50' },
                                                 { icon: 'public', label: guestTimezone.split('/').pop()?.replace('_', ' ') || guestTimezone, color: 'text-green-600', bg: 'bg-green-50' },
                                             ].map((item, i) => (
                                                 <div key={i} className="flex items-center gap-3">
