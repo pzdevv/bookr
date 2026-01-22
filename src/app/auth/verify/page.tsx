@@ -38,20 +38,20 @@ function VerifyContent() {
     }, [searchParams, router]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f] flex items-center justify-center p-4 font-[Inter,sans-serif]">
+        <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4 font-[Inter,sans-serif]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#fbbd23]/10 rounded-full blur-[200px]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#850000]/5 rounded-full blur-[200px]" />
             </div>
 
             <div className="w-full max-w-md relative z-10">
-                <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-10 text-center shadow-2xl">
+                <div className="bg-white rounded-3xl border border-[#850000]/10 p-10 text-center shadow-xl">
                     {status === 'loading' && (
                         <>
                             <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                                <div className="w-16 h-16 border-4 border-[#fbbd23] border-t-transparent rounded-full animate-spin" />
+                                <div className="w-16 h-16 border-4 border-[#850000] border-t-transparent rounded-full animate-spin" />
                             </div>
-                            <h1 className="text-2xl font-bold text-white mb-3">Verifying Email</h1>
-                            <p className="text-gray-400">{message}</p>
+                            <h1 className="text-2xl font-bold text-[#1d0c0c] mb-3">Verifying Email</h1>
+                            <p className="text-[#6b4444]">{message}</p>
                         </>
                     )}
 
@@ -63,22 +63,22 @@ function VerifyContent() {
                                     <span className="material-symbols-outlined text-white text-5xl">check</span>
                                 </div>
                             </div>
-                            <h1 className="text-2xl font-bold text-white mb-3">Email Verified!</h1>
-                            <p className="text-gray-400 mb-6">{message}</p>
-                            <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
+                            <h1 className="text-2xl font-bold text-[#1d0c0c] mb-3">Email Verified!</h1>
+                            <p className="text-[#6b4444] mb-6">{message}</p>
+                            <p className="text-sm text-[#6b4444]/60">Redirecting to dashboard...</p>
                         </>
                     )}
 
                     {status === 'error' && (
                         <>
-                            <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-red-500/20 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-red-400 text-5xl">error</span>
+                            <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-red-100 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-red-500 text-5xl">error</span>
                             </div>
-                            <h1 className="text-2xl font-bold text-white mb-3">Verification Failed</h1>
-                            <p className="text-gray-400 mb-8">{message}</p>
+                            <h1 className="text-2xl font-bold text-[#1d0c0c] mb-3">Verification Failed</h1>
+                            <p className="text-[#6b4444] mb-8">{message}</p>
                             <Link
                                 href="/dashboard"
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-[#fbbd23] text-[#1c180c] font-bold rounded-xl hover:shadow-lg hover:shadow-[#fbbd23]/20 transition-all"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-[#850000] text-white font-bold rounded-xl hover:shadow-lg hover:shadow-[#850000]/20 hover:bg-[#6b0000] transition-all"
                             >
                                 Go to Dashboard
                             </Link>
@@ -86,11 +86,11 @@ function VerifyContent() {
                     )}
                 </div>
 
-                <p className="mt-8 text-center text-gray-500 text-sm flex items-center justify-center gap-2">
+                <p className="mt-8 text-center text-[#6b4444]/40 text-sm flex items-center justify-center gap-2">
                     Powered by
-                    <span className="flex items-center gap-1.5 text-[#fbbd23] font-bold">
+                    <span className="flex items-center gap-1.5 text-[#850000] font-bold">
                         <span className="material-symbols-outlined text-lg">calendar_today</span>
-                        Bookr
+                        Book&Call
                     </span>
                 </p>
             </div>
@@ -101,8 +101,8 @@ function VerifyContent() {
 export default function VerifyPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f] flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-[#fbbd23] border-t-transparent rounded-full animate-spin" />
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center">
+                <div className="w-12 h-12 border-4 border-[#850000] border-t-transparent rounded-full animate-spin" />
             </div>
         }>
             <VerifyContent />

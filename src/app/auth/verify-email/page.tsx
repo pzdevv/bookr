@@ -38,38 +38,38 @@ export default function VerifyEmailPendingPage() {
     };
 
     return (
-        <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-[#f8f6f0] via-[#fdfcf9] to-[#f5f2ea] flex items-center justify-center p-4 font-[Inter,sans-serif]">
+        <div ref={containerRef} className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4 font-[Inter,sans-serif]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
             {/* Background */}
             <div className="fixed inset-0 -z-10">
-                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#fbbd23]/20 rounded-full blur-[200px]" />
+                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#850000]/5 rounded-full blur-[200px]" />
             </div>
 
             <div className="w-full max-w-md text-center">
                 {/* Icon */}
                 <div className="verify-icon w-24 h-24 mx-auto mb-8 relative">
-                    <div className="absolute inset-0 bg-[#fbbd23]/20 rounded-full animate-ping" />
-                    <div className="relative w-24 h-24 bg-gradient-to-br from-[#fbbd23] to-orange-500 rounded-full flex items-center justify-center shadow-2xl shadow-[#fbbd23]/40">
+                    <div className="absolute inset-0 bg-[#850000]/20 rounded-full animate-ping" />
+                    <div className="relative w-24 h-24 bg-gradient-to-br from-[#850000] to-[#6b0000] rounded-full flex items-center justify-center shadow-2xl shadow-[#850000]/30">
                         <span className="material-symbols-outlined text-white text-5xl">mark_email_unread</span>
                     </div>
                 </div>
 
                 {/* Content */}
                 <div className="verify-content">
-                    <h1 className="text-3xl font-bold text-[#1c180c] mb-3">Check your email</h1>
-                    <p className="text-gray-500 mb-2">We've sent a verification link to your email address.</p>
-                    <p className="text-gray-400 text-sm mb-8">Click the link in the email to verify your account and get started.</p>
+                    <h1 className="text-3xl font-bold text-[#1d0c0c] mb-3">Check your email</h1>
+                    <p className="text-[#6b4444] mb-2">We've sent a verification link to your email address.</p>
+                    <p className="text-[#6b4444]/70 text-sm mb-8">Click the link in the email to verify your account and get started.</p>
                 </div>
 
                 {/* Actions */}
                 <div className="verify-actions space-y-4">
-                    <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-6 shadow-lg">
+                    <div className="bg-white rounded-2xl p-6 shadow-xl border border-[#850000]/10">
                         <div className="flex items-center gap-4 text-left">
-                            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
-                                <span className="material-symbols-outlined text-blue-600 text-2xl">inbox</span>
+                            <div className="w-12 h-12 bg-[#850000]/10 rounded-xl flex items-center justify-center shrink-0">
+                                <span className="material-symbols-outlined text-[#850000] text-2xl">inbox</span>
                             </div>
                             <div>
-                                <h3 className="font-semibold text-[#1c180c]">Check your inbox</h3>
-                                <p className="text-sm text-gray-500">Look for an email from Bookr</p>
+                                <h3 className="font-semibold text-[#1d0c0c]">Check your inbox</h3>
+                                <p className="text-sm text-[#6b4444]">Look for an email from Book&Call</p>
                             </div>
                         </div>
                     </div>
@@ -77,34 +77,34 @@ export default function VerifyEmailPendingPage() {
                     <div className="flex flex-col sm:flex-row gap-3">
                         <button
                             onClick={handleResendEmail}
-                            className="flex-1 py-3 px-4 rounded-xl bg-white/60 backdrop-blur text-gray-700 font-medium text-sm hover:bg-white/80 transition-all flex items-center justify-center gap-2"
+                            className="flex-1 py-3 px-4 rounded-xl bg-white border border-[#850000]/10 text-[#6b4444] font-medium text-sm hover:bg-[#850000]/5 hover:text-[#850000] transition-all flex items-center justify-center gap-2"
                         >
                             <span className="material-symbols-outlined text-lg">refresh</span>
                             Resend Email
                         </button>
                         <Link
                             href="/auth/login"
-                            className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#fbbd23] to-orange-500 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                            className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#850000] to-[#6b0000] text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
                         >
                             <span className="material-symbols-outlined text-lg">login</span>
                             Go to Login
                         </Link>
                     </div>
 
-                    <p className="text-xs text-gray-400 mt-6">
+                    <p className="text-xs text-[#6b4444]/60 mt-6">
                         Didn't receive it? Check your spam folder or{' '}
-                        <button onClick={handleResendEmail} className="text-[#fbbd23] font-medium hover:underline">
+                        <button onClick={handleResendEmail} className="text-[#850000] font-medium hover:underline">
                             resend verification email
                         </button>
                     </p>
                 </div>
 
                 {/* Footer */}
-                <p className="mt-12 text-gray-400 text-xs flex items-center justify-center gap-2">
+                <p className="mt-12 text-[#6b4444]/40 text-xs flex items-center justify-center gap-2">
                     Powered by
-                    <span className="flex items-center gap-1 text-[#fbbd23] font-bold">
+                    <span className="flex items-center gap-1 text-[#850000] font-bold">
                         <span className="material-symbols-outlined text-base">calendar_today</span>
-                        Bookr
+                        Book&Call
                     </span>
                 </p>
             </div>
