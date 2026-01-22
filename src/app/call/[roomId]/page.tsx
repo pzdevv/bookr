@@ -7,8 +7,10 @@ import { use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAudioCall, formatCallDuration } from '@/lib/hooks/use-audio-call';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { bookingService, userService, eventTypeService, markCallStarted, markCallEnded, isCallExpired, Booking, User, EventType } from '@/lib/appwrite/database';
+import { bookingService, userService, eventTypeService, markCallStarted, markCallEnded, isCallExpired, callNotesService, Booking, User, EventType, CallNotes } from '@/lib/appwrite/database';
 import { Logo } from '@/components/ui/logo';
+import { NotesPanel } from '@/components/call/NotesPanel';
+import { PostCallRecap } from '@/components/call/PostCallRecap';
 
 export default function CallPage({ params }: { params: Promise<{ roomId: string }> }) {
     const { roomId } = use(params);
@@ -17,11 +19,14 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
     const [booking, setBooking] = useState<Booking | null>(null);
     const [host, setHost] = useState<User | null>(null);
     const [eventType, setEventType] = useState<EventType | null>(null);
+    const [previousCalls, setPreviousCalls] = useState<CallNotes[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isExpired, setIsExpired] = useState(false);
     const [userName, setUserName] = useState('');
     const [hasJoined, setHasJoined] = useState(false);
     const [isHost, setIsHost] = useState(false);
+    const [showNotesPanel, setShowNotesPanel] = useState(false);
+    const [showPostCallRecap, setShowPostCallRecap] = useState(false);
     const hasMarkedStarted = useRef(false);
     const hasMarkedEnded = useRef(false);
 
@@ -37,7 +42,6 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         roomId,
         userName: userName || 'Guest',
         onCallEnded: async () => {
-            // Mark call as ended when it terminates
             if (booking && !hasMarkedEnded.current) {
                 hasMarkedEnded.current = true;
                 try {
@@ -46,6 +50,7 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                     console.error('Failed to mark call as ended:', err);
                 }
             }
+            setShowPostCallRecap(true);
         },
     });
 
@@ -54,7 +59,6 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
             try {
                 const foundBooking = await bookingService.getByRoomId(roomId);
                 if (foundBooking) {
-                    // Check if call has expired
                     if (isCallExpired(foundBooking)) {
                         setIsExpired(true);
                         setIsLoading(false);
@@ -71,9 +75,14 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                     setHost(foundHost);
                     setEventType(foundEventType);
 
-                    // Check if current user is the host
                     if (userProfile && foundBooking.userId === userProfile.$id) {
                         setIsHost(true);
+                        // Load previous calls with this guest for context
+                        const prevCalls = await callNotesService.getByGuestEmail(
+                            foundBooking.userId,
+                            foundBooking.guestEmail
+                        );
+                        setPreviousCalls(prevCalls.filter(c => c.callRoomId !== roomId));
                     }
                 }
             } catch (err) {
@@ -87,8 +96,6 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
 
     const handleJoin = async () => {
         setHasJoined(true);
-
-        // Mark call as started (only once)
         if (booking && !hasMarkedStarted.current && !booking.callStartedAt) {
             hasMarkedStarted.current = true;
             try {
@@ -97,14 +104,11 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                 console.error('Failed to mark call as started:', err);
             }
         }
-
         await startCall();
     };
 
     const handleEndCall = async () => {
         endCall();
-
-        // Mark call as ended
         if (booking && !hasMarkedEnded.current) {
             hasMarkedEnded.current = true;
             try {
@@ -113,45 +117,48 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                 console.error('Failed to mark call as ended:', err);
             }
         }
+        setShowPostCallRecap(true);
     };
 
-    // Host redirect after call ends
-    const handleHostContinue = () => {
-        router.push('/dashboard');
+    const handlePostCallClose = () => {
+        if (isHost) {
+            router.push('/dashboard');
+        } else {
+            router.push('/');
+        }
     };
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a] flex items-center justify-center">
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex flex-col items-center gap-4"
                 >
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#fbbd23] to-orange-500 flex items-center justify-center animate-pulse shadow-2xl shadow-[#fbbd23]/30">
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center animate-pulse shadow-2xl shadow-[#850000]/30">
                         <span className="material-symbols-outlined text-white text-3xl">call</span>
                     </div>
-                    <p className="text-gray-500">Loading call...</p>
+                    <p className="text-[#6b4444] font-medium">Loading call...</p>
                 </motion.div>
             </div>
         );
     }
 
-    // Show expired state
     if (isExpired) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a] flex items-center justify-center p-4">
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 p-12 max-w-md text-center"
+                    className="bg-white rounded-2xl shadow-[6px_6px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/10 p-12 max-w-md text-center"
                 >
-                    <div className="w-24 h-24 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <span className="material-symbols-outlined text-orange-400 text-5xl">timer_off</span>
+                    <div className="w-24 h-24 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <span className="material-symbols-outlined text-orange-500 text-5xl">timer_off</span>
                     </div>
-                    <h1 className="text-2xl font-bold text-white mb-3">Call Link Expired</h1>
-                    <p className="text-gray-400 mb-8">This call has ended and the link is no longer valid.</p>
-                    <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#fbbd23] to-orange-500 text-white font-bold rounded-xl hover:shadow-lg transition-all">
+                    <h1 className="text-2xl font-bold text-[#1d0c0c] mb-3">Call Link Expired</h1>
+                    <p className="text-[#6b4444] mb-8">This call has ended and the link is no longer valid.</p>
+                    <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white font-bold rounded-xl hover:shadow-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
                         <span className="material-symbols-outlined">home</span>
                         Go Home
                     </Link>
@@ -162,18 +169,18 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
 
     if (!booking) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a] flex items-center justify-center p-4">
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 p-12 max-w-md text-center"
+                    className="bg-white rounded-2xl shadow-[6px_6px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/10 p-12 max-w-md text-center"
                 >
-                    <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <span className="material-symbols-outlined text-red-400 text-5xl">call_end</span>
+                    <div className="w-24 h-24 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <span className="material-symbols-outlined text-red-500 text-5xl">call_end</span>
                     </div>
-                    <h1 className="text-2xl font-bold text-white mb-3">Call Not Found</h1>
-                    <p className="text-gray-400 mb-8">This call link is invalid or has expired.</p>
-                    <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#fbbd23] to-orange-500 text-white font-bold rounded-xl hover:shadow-lg transition-all">
+                    <h1 className="text-2xl font-bold text-[#1d0c0c] mb-3">Call Not Found</h1>
+                    <p className="text-[#6b4444] mb-8">This call link is invalid or has expired.</p>
+                    <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white font-bold rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
                         <span className="material-symbols-outlined">home</span>
                         Go Home
                     </Link>
@@ -182,31 +189,61 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         );
     }
 
+    // Show post-call recap
+    if (showPostCallRecap && (callState === 'ended' || !hasJoined)) {
+        return (
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
+                <PostCallRecap
+                    callRoomId={roomId}
+                    hostId={booking.userId}
+                    guestName={booking.guestName}
+                    guestEmail={booking.guestEmail}
+                    hostName={host?.name || 'Host'}
+                    callDuration={callDuration}
+                    isHost={isHost}
+                    onClose={handlePostCallClose}
+                />
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#111] to-[#0a0a0a] text-white flex flex-col">
+        <div className="min-h-screen bg-[#fcf8f8] text-[#1d0c0c] flex flex-col" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
             {/* Ambient Effects */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-[40vw] h-[40vw] bg-[#fbbd23]/5 rounded-full blur-[200px]" />
-                <div className="absolute bottom-1/4 right-1/4 w-[30vw] h-[30vw] bg-purple-500/5 rounded-full blur-[150px]" />
+                <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-[#850000]/5 rounded-full blur-[200px]" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[40vw] h-[40vw] bg-[#850000]/3 rounded-full blur-[150px]" />
             </div>
 
-            {/* Header with Branding */}
-            <header className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/5">
+            {/* Header */}
+            <header className="relative z-10 flex items-center justify-between px-6 py-4 bg-white/60 backdrop-blur-xl border-b border-[#850000]/5">
                 <div className="flex items-center gap-3">
-                    <Logo size="sm" variant="light" />
-                    <span className="text-[10px] font-bold bg-[#fbbd23]/20 text-[#fbbd23] px-2 py-0.5 rounded-full">CALL</span>
+                    <Logo size="sm" />
+                    <span className="text-[10px] font-bold bg-[#850000]/10 text-[#850000] px-2 py-0.5 rounded-full">CALL</span>
                 </div>
-                {callState === 'connected' && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-green-500/20 rounded-full">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-green-400 font-medium text-sm">{formatCallDuration(callDuration)}</span>
-                    </div>
-                )}
-                {isHost && (
-                    <span className="text-xs font-medium bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full">
-                        Host
-                    </span>
-                )}
+                <div className="flex items-center gap-3">
+                    {callState === 'connected' && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-green-100 rounded-full">
+                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                            <span className="text-green-700 font-medium text-sm">{formatCallDuration(callDuration)}</span>
+                        </div>
+                    )}
+                    {isHost && (
+                        <span className="text-xs font-medium bg-[#850000]/10 text-[#850000] px-3 py-1 rounded-full">
+                            Host
+                        </span>
+                    )}
+                    {/* Notes Panel Toggle */}
+                    {hasJoined && (
+                        <button
+                            onClick={() => setShowNotesPanel(!showNotesPanel)}
+                            className={`p-2 rounded-lg transition-colors ${showNotesPanel ? 'bg-[#850000] text-white' : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'}`}
+                            title={isHost ? 'Notes & Documents' : 'Documents'}
+                        >
+                            <span className="material-symbols-outlined">{isHost ? 'edit_note' : 'folder'}</span>
+                        </button>
+                    )}
+                </div>
             </header>
 
             {/* Main Content */}
@@ -220,49 +257,75 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
-                                className="bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 p-8 text-center"
+                                className="bg-white rounded-2xl shadow-[6px_6px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/10 p-8 text-center"
                             >
                                 {/* Branding Badge */}
-                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#fbbd23]/10 rounded-full mb-6">
-                                    <span className="material-symbols-outlined text-[#fbbd23] text-sm">verified</span>
-                                    <span className="text-[#fbbd23] text-sm font-medium">Bookr Audio Call</span>
+                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#850000]/5 rounded-full mb-6">
+                                    <span className="material-symbols-outlined text-[#850000] text-sm">verified</span>
+                                    <span className="text-[#850000] text-sm font-medium">Book&Call Audio</span>
                                 </div>
+
+                                {/* Previous Calls Context (Host Only) */}
+                                {isHost && previousCalls.length > 0 && (
+                                    <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                        <div className="flex items-center gap-2 justify-center">
+                                            <span className="material-symbols-outlined text-blue-600 text-sm">history</span>
+                                            <span className="text-sm text-blue-700 font-medium">
+                                                {previousCalls.length} previous call{previousCalls.length > 1 ? 's' : ''} with {booking.guestName}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Event Info */}
                                 <div className="mb-8">
-                                    <div className="w-20 h-20 bg-gradient-to-br from-[#fbbd23]/20 to-[#fbbd23]/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                        <span className="text-[#fbbd23] text-3xl font-bold">{host?.name?.charAt(0) || '?'}</span>
+                                    <div className="w-20 h-20 bg-gradient-to-br from-[#850000]/20 to-[#850000]/5 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[3px_3px_0px_0px_rgba(133,0,0,0.2)]">
+                                        <span className="text-[#850000] text-3xl font-bold">{host?.name?.charAt(0) || '?'}</span>
                                     </div>
-                                    <h2 className="text-xl font-bold text-white mb-1">{eventType?.title || 'Meeting'}</h2>
-                                    <p className="text-gray-400">with {host?.name || 'Host'}</p>
+                                    <h2 className="text-xl font-bold text-[#1d0c0c] mb-1">{eventType?.title || 'Meeting'}</h2>
+                                    <p className="text-[#6b4444]">with {host?.name || 'Host'}</p>
                                 </div>
+
+                                {/* Call Purpose (if set) */}
+                                {booking.callPurpose && (
+                                    <div className="mb-6 p-4 bg-[#850000]/5 rounded-xl text-left">
+                                        <p className="text-xs font-bold text-[#850000] uppercase tracking-wide mb-1">Call Purpose</p>
+                                        <p className="text-sm text-[#1d0c0c]">{booking.callPurpose}</p>
+                                        {booking.expectedOutcome && (
+                                            <>
+                                                <p className="text-xs font-bold text-[#850000] uppercase tracking-wide mt-3 mb-1">Expected Outcome</p>
+                                                <p className="text-sm text-[#1d0c0c]">{booking.expectedOutcome}</p>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* Call Details */}
                                 <div className="grid grid-cols-2 gap-4 mb-8">
-                                    <div className="bg-white/5 rounded-xl p-4">
-                                        <span className="material-symbols-outlined text-[#fbbd23] mb-2">schedule</span>
-                                        <p className="text-sm text-gray-400">Duration</p>
-                                        <p className="font-bold">{eventType?.duration || 30} min</p>
+                                    <div className="bg-[#850000]/5 rounded-xl p-4">
+                                        <span className="material-symbols-outlined text-[#850000] mb-2">schedule</span>
+                                        <p className="text-sm text-[#6b4444]">Duration</p>
+                                        <p className="font-bold text-[#1d0c0c]">{eventType?.duration || 30} min</p>
                                     </div>
-                                    <div className="bg-white/5 rounded-xl p-4">
-                                        <span className="material-symbols-outlined text-[#fbbd23] mb-2">calendar_today</span>
-                                        <p className="text-sm text-gray-400">Scheduled</p>
-                                        <p className="font-bold">{new Date(booking.slotTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                                    <div className="bg-[#850000]/5 rounded-xl p-4">
+                                        <span className="material-symbols-outlined text-[#850000] mb-2">calendar_today</span>
+                                        <p className="text-sm text-[#6b4444]">Scheduled</p>
+                                        <p className="font-bold text-[#1d0c0c]">{new Date(booking.slotTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                                     </div>
                                 </div>
 
                                 {/* Features */}
-                                <div className="flex justify-center gap-6 mb-8 text-sm text-gray-400">
+                                <div className="flex justify-center gap-6 mb-8 text-sm text-[#6b4444]">
                                     <div className="flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-green-400 text-base">lock</span>
+                                        <span className="material-symbols-outlined text-green-600 text-base">lock</span>
                                         Encrypted
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-green-400 text-base">speed</span>
+                                        <span className="material-symbols-outlined text-green-600 text-base">speed</span>
                                         P2P Direct
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-green-400 text-base">record_voice_over</span>
+                                        <span className="material-symbols-outlined text-green-600 text-base">record_voice_over</span>
                                         Audio Only
                                     </div>
                                 </div>
@@ -270,49 +333,49 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                                 {/* Join Button */}
                                 <button
                                     onClick={handleJoin}
-                                    className="w-full py-4 bg-gradient-to-r from-[#fbbd23] to-orange-500 text-[#1c180c] rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-xl hover:shadow-[#fbbd23]/30 transition-all hover:scale-[1.02]"
+                                    className="w-full py-4 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white rounded-xl font-bold text-lg flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
                                 >
                                     <span className="material-symbols-outlined">call</span>
                                     Join Audio Call
                                 </button>
 
-                                <p className="text-gray-500 text-sm mt-4">
+                                <p className="text-[#6b4444] text-sm mt-4">
                                     You'll need to allow microphone access
                                 </p>
                             </motion.div>
                         )}
 
                         {/* Call screen */}
-                        {hasJoined && (
+                        {hasJoined && !showPostCallRecap && (
                             <motion.div
                                 key="call"
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className="bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 p-8"
+                                className="bg-white rounded-2xl shadow-[6px_6px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/10 p-8"
                             >
                                 {/* Avatar & Status */}
                                 <div className="text-center mb-8">
                                     <motion.div
                                         className={`w-28 h-28 rounded-full mx-auto mb-4 flex items-center justify-center ${callState === 'connected'
-                                            ? 'bg-gradient-to-br from-green-500/20 to-green-600/10 ring-4 ring-green-500/30'
-                                            : 'bg-gradient-to-br from-[#fbbd23]/20 to-[#fbbd23]/5'
+                                            ? 'bg-gradient-to-br from-green-200 to-green-100 ring-4 ring-green-400/30'
+                                            : 'bg-gradient-to-br from-[#850000]/20 to-[#850000]/5'
                                             }`}
                                         animate={callState === 'waiting' || callState === 'connecting' ? { scale: [1, 1.05, 1] } : {}}
                                         transition={{ repeat: Infinity, duration: 2 }}
                                     >
-                                        <span className={`text-4xl font-bold ${callState === 'connected' ? 'text-green-400' : 'text-[#fbbd23]'}`}>
+                                        <span className={`text-4xl font-bold ${callState === 'connected' ? 'text-green-600' : 'text-[#850000]'}`}>
                                             {isHost ? booking.guestName.charAt(0) : host?.name?.charAt(0) || '?'}
                                         </span>
                                     </motion.div>
-                                    <h2 className="text-xl font-bold text-white mb-1">
+                                    <h2 className="text-xl font-bold text-[#1d0c0c] mb-1">
                                         {isHost ? booking.guestName : host?.name || 'Host'}
                                     </h2>
-                                    <p className={`text-sm font-medium ${callState === 'connected' ? 'text-green-400' :
-                                        callState === 'waiting' ? 'text-[#fbbd23]' :
-                                            callState === 'connecting' ? 'text-blue-400' :
-                                                callState === 'error' ? 'text-red-400' :
-                                                    'text-gray-400'
+                                    <p className={`text-sm font-medium ${callState === 'connected' ? 'text-green-600' :
+                                        callState === 'waiting' ? 'text-[#850000]' :
+                                            callState === 'connecting' ? 'text-blue-600' :
+                                                callState === 'error' ? 'text-red-600' :
+                                                    'text-[#6b4444]'
                                         }`}>
                                         {callState === 'connecting' && 'Connecting...'}
                                         {callState === 'waiting' && 'Waiting for others to join...'}
@@ -327,7 +390,7 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                                     <motion.div
                                         initial={{ opacity: 0, y: -10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="mb-6 p-4 bg-red-500/10 rounded-xl text-red-400 text-sm text-center"
+                                        className="mb-6 p-4 bg-red-100 rounded-xl text-red-700 text-sm text-center"
                                     >
                                         {error}
                                     </motion.div>
@@ -336,7 +399,7 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                                 {/* Call Duration */}
                                 {callState === 'connected' && (
                                     <div className="text-center mb-8">
-                                        <p className="text-4xl font-mono font-bold text-white">
+                                        <p className="text-4xl font-mono font-bold text-[#1d0c0c]">
                                             {formatCallDuration(callDuration)}
                                         </p>
                                     </div>
@@ -350,9 +413,9 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                                             whileHover={{ scale: 1.1 }}
                                             whileTap={{ scale: 0.95 }}
                                             onClick={toggleMute}
-                                            className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${isMuted
-                                                ? 'bg-red-500/20 text-red-400 ring-2 ring-red-500/50'
-                                                : 'bg-white/10 text-white hover:bg-white/20'
+                                            className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,0.2)] ${isMuted
+                                                ? 'bg-red-100 text-red-600 ring-2 ring-red-400'
+                                                : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'
                                                 }`}
                                         >
                                             <span className="material-symbols-outlined text-2xl">
@@ -365,56 +428,23 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                                             whileHover={{ scale: 1.1 }}
                                             whileTap={{ scale: 0.95 }}
                                             onClick={handleEndCall}
-                                            className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/30 hover:bg-red-600"
+                                            className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-red-600"
                                         >
                                             <span className="material-symbols-outlined text-2xl">call_end</span>
                                         </motion.button>
-                                    </div>
-                                )}
 
-                                {/* Ended State - Different for Host vs Guest */}
-                                {callState === 'ended' && (
-                                    <div className="text-center">
-                                        <div className="bg-green-500/10 rounded-xl p-6 mb-6">
-                                            <span className="material-symbols-outlined text-green-400 text-4xl mb-2">check_circle</span>
-                                            <p className="text-green-400 font-bold text-lg">Call Completed!</p>
-                                            <p className="text-gray-400 text-sm mt-1">Duration: {formatCallDuration(callDuration)}</p>
-                                        </div>
-
-                                        {isHost ? (
-                                            // Host: Go to Dashboard
-                                            <div className="space-y-4">
-                                                <p className="text-gray-400 text-sm">Great call! Head back to your dashboard.</p>
-                                                <button
-                                                    onClick={handleHostContinue}
-                                                    className="w-full py-4 rounded-xl bg-gradient-to-r from-[#fbbd23] to-orange-500 text-[#1c180c] font-bold flex items-center justify-center gap-2 hover:shadow-xl hover:shadow-[#fbbd23]/30 transition-all"
-                                                >
-                                                    <span className="material-symbols-outlined">dashboard</span>
-                                                    Go to Dashboard
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            // Guest: CTA to book their own meetings
-                                            <div className="space-y-4">
-                                                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                                                    <p className="text-white font-medium mb-2">Enjoyed the call?</p>
-                                                    <p className="text-gray-400 text-sm">Get your own free booking page and start scheduling calls like a pro!</p>
-                                                </div>
-                                                <Link
-                                                    href="/auth/signup"
-                                                    className="w-full py-4 rounded-xl bg-gradient-to-r from-[#fbbd23] to-orange-500 text-[#1c180c] font-bold flex items-center justify-center gap-2 hover:shadow-xl hover:shadow-[#fbbd23]/30 transition-all"
-                                                >
-                                                    <span className="material-symbols-outlined">person_add</span>
-                                                    Get Your Free Booking Page
-                                                </Link>
-                                                <Link
-                                                    href="/"
-                                                    className="w-full py-3 rounded-xl bg-white/5 text-gray-400 font-medium flex items-center justify-center gap-2 hover:bg-white/10 hover:text-white transition-all"
-                                                >
-                                                    Maybe Later
-                                                </Link>
-                                            </div>
-                                        )}
+                                        {/* Notes Toggle (Mobile) */}
+                                        <motion.button
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => setShowNotesPanel(!showNotesPanel)}
+                                            className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,0.2)] ${showNotesPanel
+                                                ? 'bg-[#850000] text-white'
+                                                : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'
+                                                }`}
+                                        >
+                                            <span className="material-symbols-outlined text-2xl">{isHost ? 'edit_note' : 'folder'}</span>
+                                        </motion.button>
                                     </div>
                                 )}
 
@@ -423,7 +453,7 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                                     <div className="flex justify-center gap-4">
                                         <button
                                             onClick={() => window.location.reload()}
-                                            className="px-6 py-3 bg-[#fbbd23] text-[#1c180c] rounded-xl font-bold flex items-center gap-2 hover:shadow-lg transition-all"
+                                            className="px-6 py-3 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white rounded-xl font-bold flex items-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
                                         >
                                             <span className="material-symbols-outlined">refresh</span>
                                             Try Again
@@ -436,14 +466,25 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                 </div>
             </main>
 
-            {/* Footer with Branding */}
-            <footer className="relative z-10 text-center py-4 border-t border-white/5">
-                <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
-                    <span className="material-symbols-outlined text-[#fbbd23] text-lg">calendar_today</span>
-                    <span>Powered by <span className="text-[#fbbd23] font-bold">Bookr</span></span>
+            {/* Notes Panel */}
+            {hasJoined && booking && (
+                <NotesPanel
+                    callRoomId={roomId}
+                    hostId={booking.userId}
+                    guestEmail={booking.guestEmail}
+                    isHost={isHost}
+                    isExpanded={showNotesPanel}
+                    onToggle={() => setShowNotesPanel(!showNotesPanel)}
+                />
+            )}
+
+            {/* Footer */}
+            <footer className="relative z-10 text-center py-4 bg-white/60 backdrop-blur-xl border-t border-[#850000]/5">
+                <div className="flex items-center justify-center gap-2 text-[#6b4444] text-sm">
+                    <Logo size="sm" />
                     <span className="mx-2">•</span>
                     <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-green-400 text-sm">lock</span>
+                        <span className="material-symbols-outlined text-green-600 text-sm">lock</span>
                         P2P Encrypted Audio
                     </span>
                 </div>

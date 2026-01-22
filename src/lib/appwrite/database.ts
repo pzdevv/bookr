@@ -53,6 +53,42 @@ export interface Booking {
     callStartedAt?: string; // ISO datetime when call started
     callEndedAt?: string; // ISO datetime when call ended
     callExpiry?: string; // ISO datetime when call link expires
+    callPurpose?: string; // Purpose of the call
+    expectedOutcome?: string; // Expected outcome
+    $createdAt: string;
+    $updatedAt: string;
+}
+
+export interface ActionItem {
+    text: string;
+    assignedTo: 'host' | 'guest';
+    completed: boolean;
+}
+
+export interface CallNotes {
+    $id: string;
+    callRoomId: string;
+    hostId: string;
+    guestEmail: string;
+    summary?: string;
+    decisions?: string;
+    actionItems?: string; // JSON stringified ActionItem[]
+    callPurpose?: string;
+    expectedOutcome?: string;
+    $createdAt: string;
+    $updatedAt: string;
+}
+
+export interface CallDocument {
+    $id: string;
+    callRoomId: string;
+    hostId: string;
+    guestEmail: string;
+    fileName: string;
+    fileId: string;
+    fileSize: number;
+    fileType: string;
+    uploadedBy: 'host' | 'guest';
     $createdAt: string;
     $updatedAt: string;
 }
@@ -426,3 +462,179 @@ export function isCallExpired(booking: Booking): boolean {
     if (!booking.callExpiry) return false;
     return new Date(booking.callExpiry) < new Date();
 }
+
+// ============================================
+// CALL NOTES SERVICE
+// ============================================
+
+export const callNotesService = {
+    async create(data: Omit<CallNotes, '$id' | '$createdAt' | '$updatedAt'>): Promise<CallNotes> {
+        const result = await databases.createDocument(
+            databaseId,
+            collections.callNotes,
+            ID.unique(),
+            data
+        );
+        return result as unknown as CallNotes;
+    },
+
+    async getByRoomId(callRoomId: string): Promise<CallNotes | null> {
+        try {
+            const result = await databases.listDocuments(
+                databaseId,
+                collections.callNotes,
+                [Query.equal('callRoomId', callRoomId), Query.limit(1)]
+            );
+            return result.documents[0] as unknown as CallNotes || null;
+        } catch {
+            return null;
+        }
+    },
+
+    async getByGuestEmail(hostId: string, guestEmail: string): Promise<CallNotes[]> {
+        try {
+            const result = await databases.listDocuments(
+                databaseId,
+                collections.callNotes,
+                [
+                    Query.equal('hostId', hostId),
+                    Query.equal('guestEmail', guestEmail),
+                    Query.orderDesc('$createdAt'),
+                    Query.limit(10)
+                ]
+            );
+            return result.documents as unknown as CallNotes[];
+        } catch {
+            return [];
+        }
+    },
+
+    async update(noteId: string, data: Partial<CallNotes>): Promise<CallNotes> {
+        const result = await databases.updateDocument(
+            databaseId,
+            collections.callNotes,
+            noteId,
+            data
+        );
+        return result as unknown as CallNotes;
+    },
+
+    async getOrCreate(callRoomId: string, hostId: string, guestEmail: string): Promise<CallNotes> {
+        const existing = await this.getByRoomId(callRoomId);
+        if (existing) return existing;
+
+        return await this.create({
+            callRoomId,
+            hostId,
+            guestEmail,
+        });
+    },
+};
+
+// ============================================
+// CALL DOCUMENTS SERVICE
+// ============================================
+
+const ALLOWED_FILE_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+];
+
+const MAX_FILE_SIZE = 512000; // 500KB
+
+export const callDocumentsService = {
+    async upload(
+        file: File,
+        callRoomId: string,
+        hostId: string,
+        guestEmail: string,
+        uploadedBy: 'host' | 'guest'
+    ): Promise<CallDocument> {
+        // Validate file type
+        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+            throw new Error('File type not allowed. Please upload PDF, DOC, DOCX, TXT, XLS, or XLSX files.');
+        }
+
+        // Validate file size
+        if (file.size > MAX_FILE_SIZE) {
+            throw new Error('File too large. Maximum size is 500KB.');
+        }
+
+        // Upload to storage
+        const uploadedFile = await storage.createFile(
+            buckets.callDocuments,
+            ID.unique(),
+            file
+        );
+
+        // Create document record
+        const result = await databases.createDocument(
+            databaseId,
+            collections.callDocuments,
+            ID.unique(),
+            {
+                callRoomId,
+                hostId,
+                guestEmail,
+                fileName: file.name,
+                fileId: uploadedFile.$id,
+                fileSize: file.size,
+                fileType: file.type,
+                uploadedBy,
+            }
+        );
+
+        return result as unknown as CallDocument;
+    },
+
+    async listByRoomId(callRoomId: string): Promise<CallDocument[]> {
+        try {
+            const result = await databases.listDocuments(
+                databaseId,
+                collections.callDocuments,
+                [Query.equal('callRoomId', callRoomId), Query.orderDesc('$createdAt')]
+            );
+            return result.documents as unknown as CallDocument[];
+        } catch {
+            return [];
+        }
+    },
+
+    async listByGuestEmail(hostId: string, guestEmail: string): Promise<CallDocument[]> {
+        try {
+            const result = await databases.listDocuments(
+                databaseId,
+                collections.callDocuments,
+                [
+                    Query.equal('hostId', hostId),
+                    Query.equal('guestEmail', guestEmail),
+                    Query.orderDesc('$createdAt'),
+                    Query.limit(50)
+                ]
+            );
+            return result.documents as unknown as CallDocument[];
+        } catch {
+            return [];
+        }
+    },
+
+    getFileViewUrl(fileId: string): string {
+        return storage.getFileView(buckets.callDocuments, fileId).toString();
+    },
+
+    getFileDownloadUrl(fileId: string): string {
+        return storage.getFileDownload(buckets.callDocuments, fileId).toString();
+    },
+
+    async delete(docId: string, fileId: string): Promise<void> {
+        // Delete from storage
+        await storage.deleteFile(buckets.callDocuments, fileId);
+        // Delete document record
+        await databases.deleteDocument(databaseId, collections.callDocuments, docId);
+    },
+};
+

@@ -12,11 +12,13 @@ interface DashboardSidebarProps {
     isAdmin?: boolean;
 }
 
+
 const navItems = [
     { icon: 'home', label: 'Home', href: '/dashboard' },
     { icon: 'event', label: 'Event Types', href: '/dashboard/event-types' },
     { icon: 'schedule', label: 'Availability', href: '/dashboard/availability' },
     { icon: 'calendar_month', label: 'Bookings', href: '/dashboard/bookings' },
+    { icon: 'history', label: 'Call History', href: '/dashboard/call-history' },
     { icon: 'settings', label: 'Settings', href: '/dashboard/settings' },
 ];
 

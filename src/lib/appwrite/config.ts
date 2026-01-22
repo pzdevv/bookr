@@ -9,9 +9,12 @@ export const appwriteConfig = {
     eventTypes: process.env.NEXT_PUBLIC_APPWRITE_EVENT_TYPES_COLLECTION_ID!,
     availability: process.env.NEXT_PUBLIC_APPWRITE_AVAILABILITY_COLLECTION_ID!,
     bookings: process.env.NEXT_PUBLIC_APPWRITE_BOOKINGS_COLLECTION_ID!,
+    callNotes: process.env.NEXT_PUBLIC_APPWRITE_CALL_NOTES_COLLECTION_ID!,
+    callDocuments: process.env.NEXT_PUBLIC_APPWRITE_CALL_DOCUMENTS_COLLECTION_ID!,
   },
   buckets: {
     avatars: process.env.NEXT_PUBLIC_APPWRITE_AVATARS_BUCKET_ID!,
+    callDocuments: process.env.NEXT_PUBLIC_APPWRITE_CALL_DOCUMENTS_BUCKET_ID!,
   },
 };
 

@@ -91,7 +91,7 @@ export const authService = {
             account.createOAuth2Session(
                 OAuthProvider.Google,
                 `${window.location.origin}/dashboard`,
-                `${window.location.origin}/auth/login`
+                `${window.location.origin}/auth/signup`
             );
         } catch (error) {
             throw error;
