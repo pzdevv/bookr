@@ -45,7 +45,7 @@ interface UseCallReturn {
     sendMessage: (content: string) => void;
 }
 
-export function useCall({ roomId, bookingId, userName, userId, isHost, mode = 'video', onCallEnded }: UseCallOptions & { isHost: boolean }): UseCallReturn {
+export function useCall({ roomId, bookingId, userName, userId, isHost, mode = 'audio', onCallEnded }: UseCallOptions & { isHost: boolean }): UseCallReturn {
     const [callState, setCallState] = useState<CallState>('idle');
     const [callMode, setCallMode] = useState<CallMode>(mode);
     const [isMuted, setIsMuted] = useState(false);
@@ -216,36 +216,17 @@ export function useCall({ roomId, bookingId, userName, userId, isHost, mode = 'v
             setError(null);
             setMessages([]);
 
-            // Get media stream
+            // Get media stream (Audio Only)
             const constraints = {
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true,
                 },
-                video: callMode === 'video' ? {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    facingMode: 'user',
-                } : false,
+                video: false,
             };
 
-            // Retry logic for media stream
-            let stream: MediaStream;
-            try {
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
-            } catch (err) {
-                console.warn('High-quality constraints failed, retrying with basic config:', err);
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        audio: true,
-                        video: callMode === 'video'
-                    });
-                } catch (retryErr) {
-                    // Propagate the original error or the retry error
-                    throw retryErr;
-                }
-            }
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
             localStreamRef.current = stream;
             setLocalStream(stream);

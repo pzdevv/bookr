@@ -489,40 +489,27 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                     {hasJoined && !callEnded && (
                         <div className="fixed inset-0 bg-[#1d0c0c] text-white flex z-50">
                             {/* Main Display (Remote Video) */}
-                            <div className="flex-1 relative flex items-center justify-center overflow-hidden">
-                                {remoteStream ? (
+                            {/* Main Display (Remote Audio) */}
+                            <div className="flex-1 relative flex flex-col items-center justify-center overflow-hidden">
+                                <div className="text-center">
+                                    <div className="w-32 h-32 rounded-full bg-[#850000] flex items-center justify-center mx-auto mb-4 text-4xl font-bold animate-pulse shadow-2xl border-4 border-[#850000]/30">
+                                        {isHost ? booking.guestName.charAt(0) : host?.name?.charAt(0) || '?'}
+                                    </div>
+                                    <h2 className="text-2xl font-bold mb-2">{isHost ? booking.guestName : host?.name}</h2>
+                                    <p className="text-xl font-medium text-white/70">{callState === 'connected' ? 'Audio Connected' : 'Connecting...'}</p>
+                                </div>
+
+                                {/* Hidden Video Element for Audio Playback */}
+                                {remoteStream && (
                                     <video
                                         ref={remoteVideoRef}
                                         autoPlay
                                         playsInline
-                                        className="w-full h-full object-cover"
+                                        className="hidden"
                                     />
-                                ) : (
-                                    <div className="text-center">
-                                        <div className="w-32 h-32 rounded-full bg-[#850000] flex items-center justify-center mx-auto mb-4 text-4xl font-bold animate-pulse">
-                                            {isHost ? booking.guestName.charAt(0) : host?.name?.charAt(0) || '?'}
-                                        </div>
-                                        <p className="text-xl font-medium">{callState === 'connected' ? 'Audio only' : 'Connecting...'}</p>
-                                    </div>
                                 )}
 
-                                {/* Local Video (PIP) */}
-                                <div className="absolute bottom-24 right-6 w-32 h-48 bg-black/50 rounded-2xl overflow-hidden border border-white/20 shadow-xl backdrop-blur-sm">
-                                    {isVideoOff ? (
-                                        <div className="w-full h-full flex items-center justify-center bg-[#850000]">
-                                            <span className="text-2xl font-bold">You</span>
-                                        </div>
-                                    ) : (
-                                        <video
-                                            ref={localVideoRef}
-                                            autoPlay
-                                            playsInline
-                                            muted
-                                            className="w-full h-full object-cover mirror"
-                                            style={{ transform: 'scaleX(-1)' }}
-                                        />
-                                    )}
-                                </div>
+
 
                                 {/* Call Controls (Floating Bottom) */}
                                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-black/60 backdrop-blur-xl rounded-full border border-white/10 z-50">
@@ -533,13 +520,7 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                     >
                                         <span className="material-symbols-outlined text-2xl">{isMuted ? 'mic_off' : 'mic'}</span>
                                     </button>
-                                    <button
-                                        onClick={toggleVideo}
-                                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
-                                            }`}
-                                    >
-                                        <span className="material-symbols-outlined text-2xl">{isVideoOff ? 'videocam_off' : 'videocam'}</span>
-                                    </button>
+
                                     <button
                                         onClick={() => setShowChat(!showChat)}
                                         className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors relative ${showChat ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20'
