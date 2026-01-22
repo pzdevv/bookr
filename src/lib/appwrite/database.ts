@@ -529,6 +529,10 @@ export const callNotesService = {
             guestEmail,
         });
     },
+
+    isConfigured(): boolean {
+        return Boolean(collections.callNotes);
+    },
 };
 
 // ============================================
@@ -623,18 +627,25 @@ export const callDocumentsService = {
     },
 
     getFileViewUrl(fileId: string): string {
+        if (!buckets.callDocuments) return '';
         return storage.getFileView(buckets.callDocuments, fileId).toString();
     },
 
     getFileDownloadUrl(fileId: string): string {
+        if (!buckets.callDocuments) return '';
         return storage.getFileDownload(buckets.callDocuments, fileId).toString();
     },
 
     async delete(docId: string, fileId: string): Promise<void> {
+        if (!buckets.callDocuments) return;
         // Delete from storage
         await storage.deleteFile(buckets.callDocuments, fileId);
         // Delete document record
         await databases.deleteDocument(databaseId, collections.callDocuments, docId);
+    },
+
+    isConfigured(): boolean {
+        return Boolean(collections.callDocuments && buckets.callDocuments);
     },
 };
 

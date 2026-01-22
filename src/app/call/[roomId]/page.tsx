@@ -7,10 +7,8 @@ import { use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAudioCall, formatCallDuration } from '@/lib/hooks/use-audio-call';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { bookingService, userService, eventTypeService, markCallStarted, markCallEnded, isCallExpired, callNotesService, Booking, User, EventType, CallNotes } from '@/lib/appwrite/database';
+import { bookingService, userService, eventTypeService, markCallStarted, markCallEnded, isCallExpired, callNotesService, callDocumentsService, Booking, User, EventType, CallNotes, CallDocument, ActionItem } from '@/lib/appwrite/database';
 import { Logo } from '@/components/ui/logo';
-import { NotesPanel } from '@/components/call/NotesPanel';
-import { PostCallRecap } from '@/components/call/PostCallRecap';
 
 export default function CallPage({ params }: { params: Promise<{ roomId: string }> }) {
     const { roomId } = use(params);
@@ -25,10 +23,22 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
     const [userName, setUserName] = useState('');
     const [hasJoined, setHasJoined] = useState(false);
     const [isHost, setIsHost] = useState(false);
-    const [showNotesPanel, setShowNotesPanel] = useState(false);
-    const [showPostCallRecap, setShowPostCallRecap] = useState(false);
+    const [speakerMode, setSpeakerMode] = useState(true); // true = speaker, false = earpiece
+    const [showNotes, setShowNotes] = useState(false);
+    const [callEnded, setCallEnded] = useState(false);
+
+    // Notes state
+    const [notes, setNotes] = useState<CallNotes | null>(null);
+    const [documents, setDocuments] = useState<CallDocument[]>([]);
+    const [summary, setSummary] = useState('');
+    const [decisions, setDecisions] = useState('');
+    const [actionItems, setActionItems] = useState<ActionItem[]>([]);
+    const [newActionText, setNewActionText] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+
     const hasMarkedStarted = useRef(false);
     const hasMarkedEnded = useRef(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     const {
         callState,
@@ -50,10 +60,11 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                     console.error('Failed to mark call as ended:', err);
                 }
             }
-            setShowPostCallRecap(true);
+            setCallEnded(true);
         },
     });
 
+    // Load booking data
     useEffect(() => {
         const loadBooking = async () => {
             try {
@@ -77,12 +88,14 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
 
                     if (userProfile && foundBooking.userId === userProfile.$id) {
                         setIsHost(true);
-                        // Load previous calls with this guest for context
-                        const prevCalls = await callNotesService.getByGuestEmail(
-                            foundBooking.userId,
-                            foundBooking.guestEmail
-                        );
-                        setPreviousCalls(prevCalls.filter(c => c.callRoomId !== roomId));
+                        // Load previous calls with this guest
+                        if (callNotesService.isConfigured()) {
+                            const prevCalls = await callNotesService.getByGuestEmail(
+                                foundBooking.userId,
+                                foundBooking.guestEmail
+                            );
+                            setPreviousCalls(prevCalls.filter(c => c.callRoomId !== roomId));
+                        }
                     }
                 }
             } catch (err) {
@@ -93,6 +106,32 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         };
         loadBooking();
     }, [roomId, userProfile]);
+
+    // Load notes and documents when needed
+    useEffect(() => {
+        if (!booking || !hasJoined) return;
+
+        const loadNotesAndDocs = async () => {
+            try {
+                if (callNotesService.isConfigured()) {
+                    const notesData = await callNotesService.getOrCreate(roomId, booking.userId, booking.guestEmail);
+                    setNotes(notesData);
+                    setSummary(notesData.summary || '');
+                    setDecisions(notesData.decisions || '');
+                    setActionItems(notesData.actionItems ? JSON.parse(notesData.actionItems) : []);
+                }
+
+                if (callDocumentsService.isConfigured()) {
+                    const docsData = await callDocumentsService.listByRoomId(roomId);
+                    setDocuments(docsData);
+                }
+            } catch (err) {
+                console.error('Error loading notes:', err);
+            }
+        };
+
+        loadNotesAndDocs();
+    }, [booking, hasJoined, roomId]);
 
     const handleJoin = async () => {
         setHasJoined(true);
@@ -117,10 +156,56 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                 console.error('Failed to mark call as ended:', err);
             }
         }
-        setShowPostCallRecap(true);
+        setCallEnded(true);
     };
 
-    const handlePostCallClose = () => {
+    const toggleSpeakerMode = () => {
+        setSpeakerMode(!speakerMode);
+        // Note: Actual speaker/earpiece switching requires native app capabilities
+        // This is a visual toggle for web - actual audio routing is browser-controlled
+    };
+
+    const saveNotes = async () => {
+        if (!notes || !isHost) return;
+        setIsSaving(true);
+        try {
+            await callNotesService.update(notes.$id, {
+                summary,
+                decisions,
+                actionItems: JSON.stringify(actionItems),
+            });
+        } catch (err) {
+            console.error('Error saving notes:', err);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const addActionItem = () => {
+        if (!newActionText.trim()) return;
+        setActionItems([...actionItems, { text: newActionText.trim(), assignedTo: 'host', completed: false }]);
+        setNewActionText('');
+    };
+
+    const toggleActionItem = (index: number) => {
+        const updated = [...actionItems];
+        updated[index].completed = !updated[index].completed;
+        setActionItems(updated);
+    };
+
+    const copySummary = () => {
+        const text = `Call Summary - ${new Date().toLocaleDateString()}
+Duration: ${formatCallDuration(callDuration)}
+With: ${booking?.guestName}
+
+Summary: ${summary || 'No summary'}
+Decisions: ${decisions || 'None recorded'}
+Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1}. [${item.completed ? '✓' : ' '}] ${item.text}`).join('') : 'None'}`;
+
+        navigator.clipboard.writeText(text);
+    };
+
+    const handleClose = () => {
         if (isHost) {
             router.push('/dashboard');
         } else {
@@ -128,37 +213,39 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         }
     };
 
+    // Loading State
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex flex-col items-center gap-4"
+                    className="text-center"
                 >
-                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center animate-pulse shadow-2xl shadow-[#850000]/30">
-                        <span className="material-symbols-outlined text-white text-3xl">call</span>
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center mx-auto mb-4 shadow-xl">
+                        <span className="material-symbols-outlined text-white text-4xl animate-pulse">call</span>
                     </div>
-                    <p className="text-[#6b4444] font-medium">Loading call...</p>
+                    <p className="text-[#6b4444] font-medium">Setting up your call...</p>
                 </motion.div>
             </div>
         );
     }
 
+    // Expired State
     if (isExpired) {
         return (
-            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl shadow-[6px_6px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/10 p-12 max-w-md text-center"
+                    className="bg-white rounded-3xl shadow-xl border border-[#850000]/10 p-10 max-w-sm text-center"
                 >
-                    <div className="w-24 h-24 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <span className="material-symbols-outlined text-orange-500 text-5xl">timer_off</span>
+                    <div className="w-20 h-20 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <span className="material-symbols-outlined text-orange-500 text-4xl">schedule</span>
                     </div>
-                    <h1 className="text-2xl font-bold text-[#1d0c0c] mb-3">Call Link Expired</h1>
-                    <p className="text-[#6b4444] mb-8">This call has ended and the link is no longer valid.</p>
-                    <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white font-bold rounded-xl hover:shadow-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                    <h1 className="text-2xl font-bold text-[#1d0c0c] mb-2">Call Expired</h1>
+                    <p className="text-[#6b4444] mb-8">This call link is no longer active.</p>
+                    <Link href="/" className="inline-flex items-center gap-2 px-8 py-3 bg-[#850000] text-white font-bold rounded-xl hover:bg-[#6b0000] transition-all">
                         <span className="material-symbols-outlined">home</span>
                         Go Home
                     </Link>
@@ -167,20 +254,21 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         );
     }
 
+    // Not Found State
     if (!booking) {
         return (
-            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl shadow-[6px_6px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/10 p-12 max-w-md text-center"
+                    className="bg-white rounded-3xl shadow-xl border border-[#850000]/10 p-10 max-w-sm text-center"
                 >
-                    <div className="w-24 h-24 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <span className="material-symbols-outlined text-red-500 text-5xl">call_end</span>
+                    <div className="w-20 h-20 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <span className="material-symbols-outlined text-red-500 text-4xl">error</span>
                     </div>
-                    <h1 className="text-2xl font-bold text-[#1d0c0c] mb-3">Call Not Found</h1>
-                    <p className="text-[#6b4444] mb-8">This call link is invalid or has expired.</p>
-                    <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white font-bold rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+                    <h1 className="text-2xl font-bold text-[#1d0c0c] mb-2">Call Not Found</h1>
+                    <p className="text-[#6b4444] mb-8">This call link is invalid.</p>
+                    <Link href="/" className="inline-flex items-center gap-2 px-8 py-3 bg-[#850000] text-white font-bold rounded-xl hover:bg-[#6b0000] transition-all">
                         <span className="material-symbols-outlined">home</span>
                         Go Home
                     </Link>
@@ -189,305 +277,361 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         );
     }
 
-    // Show post-call recap
-    if (showPostCallRecap && (callState === 'ended' || !hasJoined)) {
+    // Call Ended State
+    if (callEnded) {
         return (
-            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
-                <PostCallRecap
-                    callRoomId={roomId}
-                    hostId={booking.userId}
-                    guestName={booking.guestName}
-                    guestEmail={booking.guestEmail}
-                    hostName={host?.name || 'Host'}
-                    callDuration={callDuration}
-                    isHost={isHost}
-                    onClose={handlePostCallClose}
-                />
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-white rounded-3xl shadow-xl border border-[#850000]/10 p-8 max-w-lg w-full"
+                >
+                    {/* Success Header */}
+                    <div className="text-center mb-8">
+                        <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <span className="material-symbols-outlined text-green-600 text-4xl">check_circle</span>
+                        </div>
+                        <h2 className="text-2xl font-bold text-[#1d0c0c]">Call Complete!</h2>
+                        <p className="text-[#6b4444] mt-1">Duration: {formatCallDuration(callDuration)}</p>
+                    </div>
+
+                    {/* Notes Section (Host Only) */}
+                    {isHost && callNotesService.isConfigured() && (
+                        <div className="bg-[#fcf8f8] rounded-2xl p-5 mb-6">
+                            <h3 className="font-bold text-[#1d0c0c] mb-4 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[#850000]">edit_note</span>
+                                Quick Notes
+                            </h3>
+
+                            <textarea
+                                value={summary}
+                                onChange={(e) => setSummary(e.target.value)}
+                                placeholder="What was this call about?"
+                                className="w-full p-3 bg-white border border-[#850000]/10 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#850000]/20 mb-3"
+                                rows={2}
+                            />
+
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={saveNotes}
+                                    disabled={isSaving}
+                                    className="flex-1 py-2.5 bg-[#850000]/10 text-[#850000] rounded-xl font-medium text-sm hover:bg-[#850000]/20 transition-colors disabled:opacity-50"
+                                >
+                                    {isSaving ? 'Saving...' : 'Save Notes'}
+                                </button>
+                                <button
+                                    onClick={copySummary}
+                                    className="py-2.5 px-4 bg-[#850000]/10 text-[#850000] rounded-xl font-medium text-sm hover:bg-[#850000]/20 transition-colors"
+                                >
+                                    <span className="material-symbols-outlined text-lg">content_copy</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Actions */}
+                    {isHost ? (
+                        <button
+                            onClick={handleClose}
+                            className="w-full py-4 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all"
+                        >
+                            <span className="material-symbols-outlined">dashboard</span>
+                            Back to Dashboard
+                        </button>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="bg-gradient-to-r from-[#850000]/5 to-[#850000]/10 rounded-2xl p-5 text-center">
+                                <p className="font-bold text-[#1d0c0c] mb-1">Enjoyed this call?</p>
+                                <p className="text-sm text-[#6b4444]">Create your own free booking page!</p>
+                            </div>
+                            <Link
+                                href="/auth/signup"
+                                className="w-full py-4 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all"
+                            >
+                                <span className="material-symbols-outlined">rocket_launch</span>
+                                Get Started Free
+                            </Link>
+                            <button
+                                onClick={handleClose}
+                                className="w-full py-3 text-[#6b4444] font-medium hover:text-[#1d0c0c] transition-colors"
+                            >
+                                Maybe Later
+                            </button>
+                        </div>
+                    )}
+                </motion.div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#fcf8f8] text-[#1d0c0c] flex flex-col" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
-            {/* Ambient Effects */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-[#850000]/5 rounded-full blur-[200px]" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[40vw] h-[40vw] bg-[#850000]/3 rounded-full blur-[150px]" />
-            </div>
-
+        <div className="min-h-screen bg-[#fcf8f8] flex flex-col" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
             {/* Header */}
-            <header className="relative z-10 flex items-center justify-between px-6 py-4 bg-white/60 backdrop-blur-xl border-b border-[#850000]/5">
-                <div className="flex items-center gap-3">
-                    <Logo size="sm" />
-                    <span className="text-[10px] font-bold bg-[#850000]/10 text-[#850000] px-2 py-0.5 rounded-full">CALL</span>
-                </div>
-                <div className="flex items-center gap-3">
+            <header className="flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-xl border-b border-[#850000]/5">
+                <Logo size="sm" />
+                <div className="flex items-center gap-2">
                     {callState === 'connected' && (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-green-100 rounded-full">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 rounded-full">
                             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            <span className="text-green-700 font-medium text-sm">{formatCallDuration(callDuration)}</span>
+                            <span className="text-green-700 font-mono text-sm font-bold">{formatCallDuration(callDuration)}</span>
                         </div>
                     )}
-                    {isHost && (
-                        <span className="text-xs font-medium bg-[#850000]/10 text-[#850000] px-3 py-1 rounded-full">
-                            Host
-                        </span>
-                    )}
-                    {/* Notes Panel Toggle */}
-                    {hasJoined && (
-                        <button
-                            onClick={() => setShowNotesPanel(!showNotesPanel)}
-                            className={`p-2 rounded-lg transition-colors ${showNotesPanel ? 'bg-[#850000] text-white' : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'}`}
-                            title={isHost ? 'Notes & Documents' : 'Documents'}
-                        >
-                            <span className="material-symbols-outlined">{isHost ? 'edit_note' : 'folder'}</span>
-                        </button>
-                    )}
+                    {isHost && <span className="text-xs bg-[#850000]/10 text-[#850000] px-2 py-1 rounded-full font-medium">Host</span>}
                 </div>
             </header>
 
             {/* Main Content */}
-            <main className="relative z-10 flex-1 flex items-center justify-center p-6">
-                <div className="w-full max-w-lg">
-                    <AnimatePresence mode="wait">
-                        {/* Pre-join screen */}
-                        {!hasJoined && (
-                            <motion.div
-                                key="prejoin"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                className="bg-white rounded-2xl shadow-[6px_6px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/10 p-8 text-center"
-                            >
-                                {/* Branding Badge */}
-                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#850000]/5 rounded-full mb-6">
-                                    <span className="material-symbols-outlined text-[#850000] text-sm">verified</span>
-                                    <span className="text-[#850000] text-sm font-medium">Book&Call Audio</span>
+            <main className="flex-1 flex items-center justify-center p-4">
+                <AnimatePresence mode="wait">
+                    {/* Pre-Join Screen */}
+                    {!hasJoined && (
+                        <motion.div
+                            key="prejoin"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            className="bg-white rounded-3xl shadow-xl border border-[#850000]/10 p-8 max-w-md w-full text-center"
+                        >
+                            {/* Host Avatar */}
+                            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center mx-auto mb-6 shadow-lg">
+                                <span className="text-white text-4xl font-bold">{host?.name?.charAt(0) || '?'}</span>
+                            </div>
+
+                            <h2 className="text-xl font-bold text-[#1d0c0c] mb-1">{eventType?.title || 'Meeting'}</h2>
+                            <p className="text-[#6b4444] mb-6">with {host?.name || 'Host'}</p>
+
+                            {/* Previous Calls Badge */}
+                            {isHost && previousCalls.length > 0 && (
+                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm mb-6">
+                                    <span className="material-symbols-outlined text-lg">history</span>
+                                    {previousCalls.length} previous call{previousCalls.length > 1 ? 's' : ''} with {booking.guestName}
                                 </div>
+                            )}
 
-                                {/* Previous Calls Context (Host Only) */}
-                                {isHost && previousCalls.length > 0 && (
-                                    <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                                        <div className="flex items-center gap-2 justify-center">
-                                            <span className="material-symbols-outlined text-blue-600 text-sm">history</span>
-                                            <span className="text-sm text-blue-700 font-medium">
-                                                {previousCalls.length} previous call{previousCalls.length > 1 ? 's' : ''} with {booking.guestName}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Event Info */}
-                                <div className="mb-8">
-                                    <div className="w-20 h-20 bg-gradient-to-br from-[#850000]/20 to-[#850000]/5 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[3px_3px_0px_0px_rgba(133,0,0,0.2)]">
-                                        <span className="text-[#850000] text-3xl font-bold">{host?.name?.charAt(0) || '?'}</span>
-                                    </div>
-                                    <h2 className="text-xl font-bold text-[#1d0c0c] mb-1">{eventType?.title || 'Meeting'}</h2>
-                                    <p className="text-[#6b4444]">with {host?.name || 'Host'}</p>
+                            {/* Call Info */}
+                            <div className="flex justify-center gap-6 mb-8">
+                                <div className="text-center">
+                                    <span className="material-symbols-outlined text-[#850000] text-2xl mb-1">schedule</span>
+                                    <p className="text-sm font-bold text-[#1d0c0c]">{eventType?.duration || 30} min</p>
                                 </div>
-
-                                {/* Call Purpose (if set) */}
-                                {booking.callPurpose && (
-                                    <div className="mb-6 p-4 bg-[#850000]/5 rounded-xl text-left">
-                                        <p className="text-xs font-bold text-[#850000] uppercase tracking-wide mb-1">Call Purpose</p>
-                                        <p className="text-sm text-[#1d0c0c]">{booking.callPurpose}</p>
-                                        {booking.expectedOutcome && (
-                                            <>
-                                                <p className="text-xs font-bold text-[#850000] uppercase tracking-wide mt-3 mb-1">Expected Outcome</p>
-                                                <p className="text-sm text-[#1d0c0c]">{booking.expectedOutcome}</p>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Call Details */}
-                                <div className="grid grid-cols-2 gap-4 mb-8">
-                                    <div className="bg-[#850000]/5 rounded-xl p-4">
-                                        <span className="material-symbols-outlined text-[#850000] mb-2">schedule</span>
-                                        <p className="text-sm text-[#6b4444]">Duration</p>
-                                        <p className="font-bold text-[#1d0c0c]">{eventType?.duration || 30} min</p>
-                                    </div>
-                                    <div className="bg-[#850000]/5 rounded-xl p-4">
-                                        <span className="material-symbols-outlined text-[#850000] mb-2">calendar_today</span>
-                                        <p className="text-sm text-[#6b4444]">Scheduled</p>
-                                        <p className="font-bold text-[#1d0c0c]">{new Date(booking.slotTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
-                                    </div>
-                                </div>
-
-                                {/* Features */}
-                                <div className="flex justify-center gap-6 mb-8 text-sm text-[#6b4444]">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-green-600 text-base">lock</span>
-                                        Encrypted
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-green-600 text-base">speed</span>
-                                        P2P Direct
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-green-600 text-base">record_voice_over</span>
-                                        Audio Only
-                                    </div>
-                                </div>
-
-                                {/* Join Button */}
-                                <button
-                                    onClick={handleJoin}
-                                    className="w-full py-4 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white rounded-xl font-bold text-lg flex items-center justify-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
-                                >
-                                    <span className="material-symbols-outlined">call</span>
-                                    Join Audio Call
-                                </button>
-
-                                <p className="text-[#6b4444] text-sm mt-4">
-                                    You'll need to allow microphone access
-                                </p>
-                            </motion.div>
-                        )}
-
-                        {/* Call screen */}
-                        {hasJoined && !showPostCallRecap && (
-                            <motion.div
-                                key="call"
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                className="bg-white rounded-2xl shadow-[6px_6px_0px_0px_rgba(133,0,0,0.15)] border border-[#850000]/10 p-8"
-                            >
-                                {/* Avatar & Status */}
-                                <div className="text-center mb-8">
-                                    <motion.div
-                                        className={`w-28 h-28 rounded-full mx-auto mb-4 flex items-center justify-center ${callState === 'connected'
-                                            ? 'bg-gradient-to-br from-green-200 to-green-100 ring-4 ring-green-400/30'
-                                            : 'bg-gradient-to-br from-[#850000]/20 to-[#850000]/5'
-                                            }`}
-                                        animate={callState === 'waiting' || callState === 'connecting' ? { scale: [1, 1.05, 1] } : {}}
-                                        transition={{ repeat: Infinity, duration: 2 }}
-                                    >
-                                        <span className={`text-4xl font-bold ${callState === 'connected' ? 'text-green-600' : 'text-[#850000]'}`}>
-                                            {isHost ? booking.guestName.charAt(0) : host?.name?.charAt(0) || '?'}
-                                        </span>
-                                    </motion.div>
-                                    <h2 className="text-xl font-bold text-[#1d0c0c] mb-1">
-                                        {isHost ? booking.guestName : host?.name || 'Host'}
-                                    </h2>
-                                    <p className={`text-sm font-medium ${callState === 'connected' ? 'text-green-600' :
-                                        callState === 'waiting' ? 'text-[#850000]' :
-                                            callState === 'connecting' ? 'text-blue-600' :
-                                                callState === 'error' ? 'text-red-600' :
-                                                    'text-[#6b4444]'
-                                        }`}>
-                                        {callState === 'connecting' && 'Connecting...'}
-                                        {callState === 'waiting' && 'Waiting for others to join...'}
-                                        {callState === 'connected' && 'Connected'}
-                                        {callState === 'ended' && 'Call ended'}
-                                        {callState === 'error' && 'Connection failed'}
+                                <div className="text-center">
+                                    <span className="material-symbols-outlined text-[#850000] text-2xl mb-1">calendar_today</span>
+                                    <p className="text-sm font-bold text-[#1d0c0c]">
+                                        {new Date(booking.slotTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                     </p>
                                 </div>
+                                <div className="text-center">
+                                    <span className="material-symbols-outlined text-green-600 text-2xl mb-1">lock</span>
+                                    <p className="text-sm font-bold text-[#1d0c0c]">Encrypted</p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleJoin}
+                                className="w-full py-4 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white rounded-xl font-bold text-lg flex items-center justify-center gap-3 hover:shadow-xl hover:shadow-[#850000]/20 transition-all"
+                            >
+                                <span className="material-symbols-outlined text-2xl">call</span>
+                                Join Call
+                            </button>
+
+                            <p className="text-xs text-[#6b4444] mt-4">Microphone access required</p>
+                        </motion.div>
+                    )}
+
+                    {/* In Call Screen */}
+                    {hasJoined && !callEnded && (
+                        <motion.div
+                            key="incall"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-md"
+                        >
+                            {/* Call Card */}
+                            <div className="bg-white rounded-3xl shadow-xl border border-[#850000]/10 p-8 text-center">
+                                {/* Avatar with Status Ring */}
+                                <motion.div
+                                    className={`w-32 h-32 rounded-full mx-auto mb-6 flex items-center justify-center ${callState === 'connected'
+                                            ? 'bg-gradient-to-br from-green-400 to-green-500 ring-4 ring-green-200'
+                                            : 'bg-gradient-to-br from-[#850000] to-[#6b0000]'
+                                        }`}
+                                    animate={callState === 'waiting' ? { scale: [1, 1.05, 1] } : {}}
+                                    transition={{ repeat: Infinity, duration: 2 }}
+                                >
+                                    <span className="text-white text-5xl font-bold">
+                                        {isHost ? booking.guestName.charAt(0) : host?.name?.charAt(0) || '?'}
+                                    </span>
+                                </motion.div>
+
+                                <h2 className="text-xl font-bold text-[#1d0c0c] mb-1">
+                                    {isHost ? booking.guestName : host?.name || 'Host'}
+                                </h2>
+
+                                <p className={`text-sm font-medium mb-8 ${callState === 'connected' ? 'text-green-600' :
+                                        callState === 'waiting' ? 'text-[#850000]' :
+                                            callState === 'error' ? 'text-red-600' : 'text-[#6b4444]'
+                                    }`}>
+                                    {callState === 'connecting' && 'Connecting...'}
+                                    {callState === 'waiting' && 'Waiting for others...'}
+                                    {callState === 'connected' && 'Connected'}
+                                    {callState === 'error' && 'Connection failed'}
+                                </p>
 
                                 {/* Error Message */}
                                 {error && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="mb-6 p-4 bg-red-100 rounded-xl text-red-700 text-sm text-center"
-                                    >
+                                    <div className="mb-6 p-3 bg-red-50 text-red-700 rounded-xl text-sm">
                                         {error}
-                                    </motion.div>
+                                    </div>
                                 )}
 
                                 {/* Call Duration */}
                                 {callState === 'connected' && (
-                                    <div className="text-center mb-8">
-                                        <p className="text-4xl font-mono font-bold text-[#1d0c0c]">
-                                            {formatCallDuration(callDuration)}
-                                        </p>
+                                    <div className="text-5xl font-mono font-bold text-[#1d0c0c] mb-8">
+                                        {formatCallDuration(callDuration)}
                                     </div>
                                 )}
 
-                                {/* Call Controls */}
-                                {(callState === 'connected' || callState === 'waiting' || callState === 'connecting') && (
-                                    <div className="flex items-center justify-center gap-4">
-                                        {/* Mute Button */}
-                                        <motion.button
-                                            whileHover={{ scale: 1.1 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={toggleMute}
-                                            className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,0.2)] ${isMuted
-                                                ? 'bg-red-100 text-red-600 ring-2 ring-red-400'
+                                {/* Controls */}
+                                <div className="flex items-center justify-center gap-4">
+                                    {/* Mute Button */}
+                                    <motion.button
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={toggleMute}
+                                        className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${isMuted
+                                                ? 'bg-red-100 text-red-600'
                                                 : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'
-                                                }`}
-                                        >
-                                            <span className="material-symbols-outlined text-2xl">
-                                                {isMuted ? 'mic_off' : 'mic'}
-                                            </span>
-                                        </motion.button>
+                                            }`}
+                                    >
+                                        <span className="material-symbols-outlined text-2xl">
+                                            {isMuted ? 'mic_off' : 'mic'}
+                                        </span>
+                                    </motion.button>
 
-                                        {/* End Call Button */}
-                                        <motion.button
-                                            whileHover={{ scale: 1.1 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={handleEndCall}
-                                            className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:bg-red-600"
-                                        >
-                                            <span className="material-symbols-outlined text-2xl">call_end</span>
-                                        </motion.button>
+                                    {/* End Call Button */}
+                                    <motion.button
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={handleEndCall}
+                                        className="w-20 h-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/30 hover:bg-red-600 transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-3xl">call_end</span>
+                                    </motion.button>
 
-                                        {/* Notes Toggle (Mobile) */}
-                                        <motion.button
-                                            whileHover={{ scale: 1.1 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={() => setShowNotesPanel(!showNotesPanel)}
-                                            className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,0.2)] ${showNotesPanel
+                                    {/* Speaker/Earpiece Toggle */}
+                                    <motion.button
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={toggleSpeakerMode}
+                                        className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${speakerMode
                                                 ? 'bg-[#850000] text-white'
                                                 : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'
-                                                }`}
-                                        >
-                                            <span className="material-symbols-outlined text-2xl">{isHost ? 'edit_note' : 'folder'}</span>
-                                        </motion.button>
-                                    </div>
+                                            }`}
+                                        title={speakerMode ? 'Speaker On' : 'Earpiece Mode'}
+                                    >
+                                        <span className="material-symbols-outlined text-2xl">
+                                            {speakerMode ? 'volume_up' : 'phone_in_talk'}
+                                        </span>
+                                    </motion.button>
+                                </div>
+
+                                {/* Notes Toggle (Host Only) */}
+                                {isHost && callNotesService.isConfigured() && (
+                                    <button
+                                        onClick={() => setShowNotes(!showNotes)}
+                                        className="mt-6 text-sm text-[#6b4444] hover:text-[#850000] transition-colors flex items-center gap-1 mx-auto"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">edit_note</span>
+                                        {showNotes ? 'Hide Notes' : 'Take Notes'}
+                                    </button>
                                 )}
 
-                                {/* Error Retry */}
+                                {/* Retry Button on Error */}
                                 {callState === 'error' && (
-                                    <div className="flex justify-center gap-4">
-                                        <button
-                                            onClick={() => window.location.reload()}
-                                            className="px-6 py-3 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white rounded-xl font-bold flex items-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
-                                        >
-                                            <span className="material-symbols-outlined">refresh</span>
-                                            Try Again
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={() => window.location.reload()}
+                                        className="mt-6 px-6 py-2 bg-[#850000] text-white rounded-xl font-medium"
+                                    >
+                                        Retry
+                                    </button>
                                 )}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
+                            </div>
+
+                            {/* Notes Panel */}
+                            <AnimatePresence>
+                                {showNotes && isHost && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="bg-white rounded-3xl shadow-xl border border-[#850000]/10 p-6 mt-4"
+                                    >
+                                        <h3 className="font-bold text-[#1d0c0c] mb-4 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[#850000]">edit_note</span>
+                                            Call Notes
+                                            {isSaving && <span className="text-xs text-[#6b4444] ml-auto">Saving...</span>}
+                                        </h3>
+
+                                        {/* Summary */}
+                                        <div className="mb-4">
+                                            <label className="text-xs font-bold text-[#6b4444] uppercase tracking-wide">Summary</label>
+                                            <textarea
+                                                value={summary}
+                                                onChange={(e) => setSummary(e.target.value)}
+                                                onBlur={saveNotes}
+                                                placeholder="Key points discussed..."
+                                                className="w-full mt-1 p-3 bg-[#fcf8f8] border border-[#850000]/10 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#850000]/20"
+                                                rows={2}
+                                            />
+                                        </div>
+
+                                        {/* Action Items */}
+                                        <div>
+                                            <label className="text-xs font-bold text-[#6b4444] uppercase tracking-wide">Action Items</label>
+                                            <div className="mt-2 space-y-2">
+                                                {actionItems.map((item, index) => (
+                                                    <div key={index} className="flex items-center gap-2 p-2 bg-[#fcf8f8] rounded-lg">
+                                                        <button
+                                                            onClick={() => { toggleActionItem(index); saveNotes(); }}
+                                                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${item.completed ? 'bg-green-500 border-green-500 text-white' : 'border-[#850000]/30'
+                                                                }`}
+                                                        >
+                                                            {item.completed && <span className="material-symbols-outlined text-xs">check</span>}
+                                                        </button>
+                                                        <span className={`text-sm flex-1 ${item.completed ? 'line-through text-[#6b4444]' : 'text-[#1d0c0c]'}`}>
+                                                            {item.text}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={newActionText}
+                                                        onChange={(e) => setNewActionText(e.target.value)}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter') { addActionItem(); saveNotes(); } }}
+                                                        placeholder="Add action item..."
+                                                        className="flex-1 p-2 bg-white border border-[#850000]/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#850000]/20"
+                                                    />
+                                                    <button
+                                                        onClick={() => { addActionItem(); saveNotes(); }}
+                                                        className="px-3 py-2 bg-[#850000] text-white rounded-lg text-sm font-medium"
+                                                    >
+                                                        Add
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </main>
 
-            {/* Notes Panel */}
-            {hasJoined && booking && (
-                <NotesPanel
-                    callRoomId={roomId}
-                    hostId={booking.userId}
-                    guestEmail={booking.guestEmail}
-                    isHost={isHost}
-                    isExpanded={showNotesPanel}
-                    onToggle={() => setShowNotesPanel(!showNotesPanel)}
-                />
-            )}
-
             {/* Footer */}
-            <footer className="relative z-10 text-center py-4 bg-white/60 backdrop-blur-xl border-t border-[#850000]/5">
-                <div className="flex items-center justify-center gap-2 text-[#6b4444] text-sm">
-                    <Logo size="sm" />
-                    <span className="mx-2">•</span>
-                    <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-green-600 text-sm">lock</span>
-                        P2P Encrypted Audio
-                    </span>
-                </div>
+            <footer className="text-center py-3 text-xs text-[#6b4444]">
+                <span className="flex items-center justify-center gap-1">
+                    <span className="material-symbols-outlined text-green-600 text-sm">lock</span>
+                    P2P Encrypted Audio • Book&Call
+                </span>
             </footer>
         </div>
     );

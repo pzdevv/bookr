@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { bookingService, callNotesService, callDocumentsService, Booking, CallNotes, CallDocument } from '@/lib/appwrite/database';
 import { formatCallDuration } from '@/lib/hooks/use-audio-call';
@@ -17,7 +17,7 @@ export default function CallHistoryPage() {
     const { userProfile } = useAuth();
     const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
     const [filter, setFilter] = useState<'all' | 'with_notes' | 'with_docs'>('all');
 
     useEffect(() => {
@@ -32,10 +32,21 @@ export default function CallHistoryPage() {
                 // Load notes and documents for each
                 const records: CallRecord[] = await Promise.all(
                     completedBookings.map(async (booking) => {
-                        const [notes, documents] = await Promise.all([
-                            callNotesService.getByRoomId(booking.callRoomId!),
-                            callDocumentsService.listByRoomId(booking.callRoomId!),
-                        ]);
+                        let notes: CallNotes | null = null;
+                        let documents: CallDocument[] = [];
+
+                        if (callNotesService.isConfigured()) {
+                            try {
+                                notes = await callNotesService.getByRoomId(booking.callRoomId!);
+                            } catch { /* ignore */ }
+                        }
+
+                        if (callDocumentsService.isConfigured()) {
+                            try {
+                                documents = await callDocumentsService.listByRoomId(booking.callRoomId!);
+                            } catch { /* ignore */ }
+                        }
+
                         return { booking, notes, documents };
                     })
                 );
@@ -73,9 +84,9 @@ export default function CallHistoryPage() {
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
         return date.toLocaleDateString('en-US', {
+            weekday: 'short',
             month: 'short',
             day: 'numeric',
-            year: 'numeric',
             hour: 'numeric',
             minute: '2-digit',
         });
@@ -86,11 +97,20 @@ export default function CallHistoryPage() {
         return Math.floor((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000);
     };
 
+    const parseActionItems = (actionItemsStr?: string) => {
+        if (!actionItemsStr) return [];
+        try {
+            return JSON.parse(actionItemsStr) as { text: string; completed: boolean }[];
+        } catch {
+            return [];
+        }
+    };
+
     if (isLoading) {
         return (
-            <div className="p-6 flex items-center justify-center min-h-[50vh]">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-3 border-[#850000] border-t-transparent rounded-full animate-spin" />
+            <div className="min-h-[60vh] flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-3 border-[#850000] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                     <p className="text-[#6b4444]">Loading call history...</p>
                 </div>
             </div>
@@ -98,44 +118,58 @@ export default function CallHistoryPage() {
     }
 
     return (
-        <div className="p-6 max-w-6xl mx-auto">
+        <div className="p-6 max-w-4xl mx-auto">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold text-[#1d0c0c]">Call History</h1>
-                    <p className="text-[#6b4444]">Review your past calls, notes, and shared documents</p>
-                </div>
-
-                {/* Filters */}
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setFilter('all')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-[#850000] text-white' : 'bg-[#850000]/5 text-[#850000] hover:bg-[#850000]/10'}`}
-                    >
-                        All ({callRecords.length})
-                    </button>
-                    <button
-                        onClick={() => setFilter('with_notes')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'with_notes' ? 'bg-[#850000] text-white' : 'bg-[#850000]/5 text-[#850000] hover:bg-[#850000]/10'}`}
-                    >
-                        With Notes
-                    </button>
-                    <button
-                        onClick={() => setFilter('with_docs')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'with_docs' ? 'bg-[#850000] text-white' : 'bg-[#850000]/5 text-[#850000] hover:bg-[#850000]/10'}`}
-                    >
-                        With Docs
-                    </button>
-                </div>
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold text-[#1d0c0c] mb-2">Call History</h1>
+                <p className="text-[#6b4444]">Review your past calls, notes, and shared documents</p>
             </div>
 
+            {/* Filters */}
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                <button
+                    onClick={() => setFilter('all')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'all'
+                            ? 'bg-[#850000] text-white shadow-lg'
+                            : 'bg-white text-[#6b4444] border border-[#850000]/10 hover:border-[#850000]/30'
+                        }`}
+                >
+                    All Calls ({callRecords.length})
+                </button>
+                <button
+                    onClick={() => setFilter('with_notes')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'with_notes'
+                            ? 'bg-[#850000] text-white shadow-lg'
+                            : 'bg-white text-[#6b4444] border border-[#850000]/10 hover:border-[#850000]/30'
+                        }`}
+                >
+                    <span className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-base">notes</span>
+                        With Notes
+                    </span>
+                </button>
+                <button
+                    onClick={() => setFilter('with_docs')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'with_docs'
+                            ? 'bg-[#850000] text-white shadow-lg'
+                            : 'bg-white text-[#6b4444] border border-[#850000]/10 hover:border-[#850000]/30'
+                        }`}
+                >
+                    <span className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-base">folder</span>
+                        With Documents
+                    </span>
+                </button>
+            </div>
+
+            {/* Empty State */}
             {filteredRecords.length === 0 ? (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl shadow-[6px_6px_0px_0px_rgba(133,0,0,0.1)] border border-[#850000]/10 p-12 text-center"
+                    className="bg-white rounded-2xl border border-[#850000]/10 p-12 text-center"
                 >
-                    <div className="w-20 h-20 bg-[#850000]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <div className="w-20 h-20 bg-[#850000]/5 rounded-2xl flex items-center justify-center mx-auto mb-6">
                         <span className="material-symbols-outlined text-[#850000] text-4xl">history</span>
                     </div>
                     <h3 className="text-xl font-bold text-[#1d0c0c] mb-2">No calls yet</h3>
@@ -149,136 +183,168 @@ export default function CallHistoryPage() {
                     </Link>
                 </motion.div>
             ) : (
-                <div className="grid gap-4">
-                    {filteredRecords.map((record, index) => (
-                        <motion.div
-                            key={record.booking.$id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            className="bg-white rounded-xl shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)] border border-[#850000]/10 p-5 hover:shadow-[6px_6px_0px_0px_rgba(133,0,0,0.15)] transition-all cursor-pointer"
-                            onClick={() => setSelectedCall(selectedCall?.booking.$id === record.booking.$id ? null : record)}
-                        >
-                            <div className="flex items-start gap-4">
-                                {/* Avatar */}
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#850000]/20 to-[#850000]/5 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-[#850000] font-bold text-lg">{record.booking.guestName.charAt(0)}</span>
-                                </div>
+                <div className="space-y-4">
+                    {filteredRecords.map((record, index) => {
+                        const isExpanded = expandedId === record.booking.$id;
+                        const duration = calculateDuration(record.booking.callStartedAt, record.booking.callEndedAt);
+                        const actionItems = parseActionItems(record.notes?.actionItems);
 
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <h3 className="font-bold text-[#1d0c0c]">{record.booking.guestName}</h3>
-                                            <p className="text-sm text-[#6b4444]">{record.booking.guestEmail}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-sm font-medium text-[#1d0c0c]">{formatDate(record.booking.slotTime)}</p>
-                                            <p className="text-xs text-[#6b4444]">
-                                                {formatCallDuration(calculateDuration(record.booking.callStartedAt, record.booking.callEndedAt))}
-                                            </p>
-                                        </div>
+                        return (
+                            <motion.div
+                                key={record.booking.$id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.03 }}
+                                className="bg-white rounded-2xl border border-[#850000]/10 overflow-hidden hover:shadow-lg transition-all"
+                            >
+                                {/* Header Row - Always Visible */}
+                                <button
+                                    onClick={() => setExpandedId(isExpanded ? null : record.booking.$id)}
+                                    className="w-full p-5 flex items-center gap-4 text-left hover:bg-[#850000]/[0.02] transition-colors"
+                                >
+                                    {/* Avatar */}
+                                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center flex-shrink-0">
+                                        <span className="text-white font-bold text-xl">{record.booking.guestName.charAt(0)}</span>
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-[#1d0c0c] truncate">{record.booking.guestName}</h3>
+                                        <p className="text-sm text-[#6b4444] truncate">{record.booking.guestEmail}</p>
+                                    </div>
+
+                                    {/* Meta */}
+                                    <div className="text-right flex-shrink-0 hidden sm:block">
+                                        <p className="text-sm font-medium text-[#1d0c0c]">{formatDate(record.booking.slotTime)}</p>
+                                        <p className="text-xs text-[#6b4444]">{formatCallDuration(duration)}</p>
                                     </div>
 
                                     {/* Badges */}
-                                    <div className="flex gap-2 mt-3">
+                                    <div className="flex gap-1.5 flex-shrink-0">
                                         {record.notes?.summary && (
-                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium">
-                                                <span className="material-symbols-outlined text-sm">notes</span>
-                                                Notes
+                                            <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center" title="Has notes">
+                                                <span className="material-symbols-outlined text-blue-600 text-lg">notes</span>
                                             </span>
                                         )}
                                         {record.documents.length > 0 && (
-                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium">
-                                                <span className="material-symbols-outlined text-sm">folder</span>
-                                                {record.documents.length} doc{record.documents.length > 1 ? 's' : ''}
+                                            <span className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center" title={`${record.documents.length} documents`}>
+                                                <span className="material-symbols-outlined text-green-600 text-lg">folder</span>
                                             </span>
                                         )}
-                                        {record.notes?.actionItems && JSON.parse(record.notes.actionItems).length > 0 && (
-                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-md text-xs font-medium">
-                                                <span className="material-symbols-outlined text-sm">checklist</span>
-                                                Actions
+                                        {actionItems.length > 0 && (
+                                            <span className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center" title={`${actionItems.length} action items`}>
+                                                <span className="material-symbols-outlined text-orange-600 text-lg">checklist</span>
                                             </span>
                                         )}
                                     </div>
-                                </div>
 
-                                {/* Expand Arrow */}
-                                <span className={`material-symbols-outlined text-[#6b4444] transition-transform ${selectedCall?.booking.$id === record.booking.$id ? 'rotate-180' : ''}`}>
-                                    expand_more
-                                </span>
-                            </div>
+                                    {/* Expand Arrow */}
+                                    <span className={`material-symbols-outlined text-[#6b4444] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                                        expand_more
+                                    </span>
+                                </button>
 
-                            {/* Expanded Content */}
-                            {selectedCall?.booking.$id === record.booking.$id && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    className="mt-4 pt-4 border-t border-[#850000]/10"
-                                >
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                        {/* Notes */}
-                                        <div className="space-y-3">
-                                            {record.notes?.summary && (
-                                                <div>
-                                                    <h4 className="text-xs font-bold text-[#1d0c0c] uppercase tracking-wide mb-1">Summary</h4>
-                                                    <p className="text-sm text-[#6b4444] bg-[#850000]/5 rounded-lg p-3">{record.notes.summary}</p>
+                                {/* Expanded Content */}
+                                <AnimatePresence>
+                                    {isExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="px-5 pb-5 pt-2 border-t border-[#850000]/5">
+                                                {/* Mobile Date */}
+                                                <div className="sm:hidden mb-4 text-sm text-[#6b4444]">
+                                                    {formatDate(record.booking.slotTime)} • {formatCallDuration(duration)}
                                                 </div>
-                                            )}
-                                            {record.notes?.decisions && (
-                                                <div>
-                                                    <h4 className="text-xs font-bold text-[#1d0c0c] uppercase tracking-wide mb-1">Decisions</h4>
-                                                    <p className="text-sm text-[#6b4444] bg-[#850000]/5 rounded-lg p-3">{record.notes.decisions}</p>
-                                                </div>
-                                            )}
-                                            {record.notes?.actionItems && JSON.parse(record.notes.actionItems).length > 0 && (
-                                                <div>
-                                                    <h4 className="text-xs font-bold text-[#1d0c0c] uppercase tracking-wide mb-1">Action Items</h4>
-                                                    <ul className="space-y-1">
-                                                        {JSON.parse(record.notes.actionItems).map((item: { text: string; completed: boolean }, i: number) => (
-                                                            <li key={i} className="flex items-center gap-2 text-sm">
-                                                                <span className={`material-symbols-outlined text-base ${item.completed ? 'text-green-600' : 'text-[#6b4444]'}`}>
-                                                                    {item.completed ? 'check_circle' : 'radio_button_unchecked'}
-                                                                </span>
-                                                                <span className={item.completed ? 'line-through text-[#6b4444]' : 'text-[#1d0c0c]'}>{item.text}</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
-                                            {!record.notes?.summary && !record.notes?.decisions && (
-                                                <p className="text-sm text-[#6b4444] italic">No notes recorded for this call.</p>
-                                            )}
-                                        </div>
 
-                                        {/* Documents */}
-                                        <div>
-                                            <h4 className="text-xs font-bold text-[#1d0c0c] uppercase tracking-wide mb-2">Documents</h4>
-                                            {record.documents.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {record.documents.map((doc) => (
-                                                        <div key={doc.$id} className="flex items-center gap-3 p-3 bg-[#850000]/5 rounded-lg">
-                                                            <span className="material-symbols-outlined text-[#850000]">{getFileIcon(doc.fileType)}</span>
-                                                            <span className="flex-1 text-sm font-medium text-[#1d0c0c] truncate">{doc.fileName}</span>
-                                                            <a
-                                                                href={callDocumentsService.getFileDownloadUrl(doc.fileId)}
-                                                                className="p-1.5 hover:bg-white rounded-lg transition-colors"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <span className="material-symbols-outlined text-[#6b4444] text-lg">download</span>
-                                                            </a>
-                                                        </div>
-                                                    ))}
+                                                <div className="grid md:grid-cols-2 gap-6">
+                                                    {/* Notes Section */}
+                                                    <div className="space-y-4">
+                                                        <h4 className="font-bold text-[#1d0c0c] flex items-center gap-2">
+                                                            <span className="material-symbols-outlined text-[#850000]">edit_note</span>
+                                                            Notes
+                                                        </h4>
+
+                                                        {record.notes?.summary ? (
+                                                            <div className="bg-[#fcf8f8] rounded-xl p-4">
+                                                                <p className="text-xs font-bold text-[#850000] uppercase tracking-wide mb-1">Summary</p>
+                                                                <p className="text-sm text-[#1d0c0c] whitespace-pre-wrap">{record.notes.summary}</p>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm text-[#6b4444] italic">No summary recorded</p>
+                                                        )}
+
+                                                        {record.notes?.decisions && (
+                                                            <div className="bg-[#fcf8f8] rounded-xl p-4">
+                                                                <p className="text-xs font-bold text-[#850000] uppercase tracking-wide mb-1">Decisions</p>
+                                                                <p className="text-sm text-[#1d0c0c] whitespace-pre-wrap">{record.notes.decisions}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {actionItems.length > 0 && (
+                                                            <div className="bg-[#fcf8f8] rounded-xl p-4">
+                                                                <p className="text-xs font-bold text-[#850000] uppercase tracking-wide mb-2">Action Items</p>
+                                                                <ul className="space-y-2">
+                                                                    {actionItems.map((item, i) => (
+                                                                        <li key={i} className="flex items-start gap-2 text-sm">
+                                                                            <span className={`material-symbols-outlined text-base mt-0.5 ${item.completed ? 'text-green-600' : 'text-[#6b4444]'}`}>
+                                                                                {item.completed ? 'check_circle' : 'radio_button_unchecked'}
+                                                                            </span>
+                                                                            <span className={item.completed ? 'line-through text-[#6b4444]' : 'text-[#1d0c0c]'}>
+                                                                                {item.text}
+                                                                            </span>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Documents Section */}
+                                                    <div>
+                                                        <h4 className="font-bold text-[#1d0c0c] flex items-center gap-2 mb-4">
+                                                            <span className="material-symbols-outlined text-[#850000]">folder</span>
+                                                            Documents
+                                                        </h4>
+
+                                                        {record.documents.length > 0 ? (
+                                                            <div className="space-y-2">
+                                                                {record.documents.map((doc) => (
+                                                                    <div key={doc.$id} className="flex items-center gap-3 p-3 bg-[#fcf8f8] rounded-xl group">
+                                                                        <span className="material-symbols-outlined text-[#850000]">{getFileIcon(doc.fileType)}</span>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="text-sm font-medium text-[#1d0c0c] truncate">{doc.fileName}</p>
+                                                                            <p className="text-xs text-[#6b4444]">
+                                                                                {(doc.fileSize / 1024).toFixed(1)} KB
+                                                                            </p>
+                                                                        </div>
+                                                                        {callDocumentsService.isConfigured() && (
+                                                                            <a
+                                                                                href={callDocumentsService.getFileDownloadUrl(doc.fileId)}
+                                                                                className="w-9 h-9 rounded-lg bg-white flex items-center justify-center hover:bg-[#850000] hover:text-white text-[#6b4444] transition-colors"
+                                                                                title="Download"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-lg">download</span>
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm text-[#6b4444] italic">No documents shared</p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            ) : (
-                                                <p className="text-sm text-[#6b4444] italic">No documents shared in this call.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </motion.div>
-                    ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        );
+                    })}
                 </div>
             )}
         </div>
