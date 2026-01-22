@@ -21,7 +21,7 @@ export function Logo({ size = 'md', showText = true, variant = 'dark', href = '/
         <div className="flex items-center gap-2">
             <Image
                 src="/logo.png"
-                alt="Bookr"
+                alt="Book&Call"
                 width={dimensions.width}
                 height={dimensions.height}
                 className={`object-contain ${variant === 'light' ? 'brightness-0 invert' : ''}`}
@@ -46,7 +46,7 @@ export function LogoIcon({ size = 32, className = '' }: { size?: number; classNa
     return (
         <Image
             src="/favicon.png"
-            alt="Bookr"
+            alt="Book&Call"
             width={size}
             height={size}
             className={`h-auto ${className}`}

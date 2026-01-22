@@ -126,7 +126,7 @@ export default function LoginPage() {
                             <div className="space-y-6">
                                 <div className="flex flex-col text-4xl lg:text-5xl leading-[1.1]">
                                     <span className="text-[#850000] font-extrabold uppercase tracking-tight" style={{ fontFamily: "'Inter', sans-serif" }}>Welcome</span>
-                                    <span className="text-[#1d0c0c] italic font-bold capitalize" style={{ fontFamily: "'Playfair Display', serif" }}>Back to Bookr</span>
+                                    <span className="text-[#1d0c0c] italic font-bold capitalize" style={{ fontFamily: "'Playfair Display', serif" }}>Back to Book&Call</span>
                                 </div>
                                 <p className="text-[#6b4444] text-lg leading-relaxed max-w-sm">
                                     Sign in to manage your appointments and stay organized with your schedule.

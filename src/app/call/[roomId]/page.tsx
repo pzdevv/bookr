@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAudioCall, formatCallDuration } from '@/lib/hooks/use-audio-call';
+import { useCall, formatCallDuration } from '@/lib/hooks/use-call';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { bookingService, userService, eventTypeService, markCallStarted, markCallEnded, isCallExpired, callNotesService, callDocumentsService, Booking, User, EventType, CallNotes, CallDocument, ActionItem } from '@/lib/appwrite/database';
 import { sanitizeMultiline, sanitizeText } from '@/lib/utils/sanitize';
@@ -24,9 +24,10 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
     const [userName, setUserName] = useState('');
     const [hasJoined, setHasJoined] = useState(false);
     const [isHost, setIsHost] = useState(false);
-    const [speakerMode, setSpeakerMode] = useState(true); // true = speaker, false = earpiece
     const [showNotes, setShowNotes] = useState(false);
+    const [showChat, setShowChat] = useState(false);
     const [callEnded, setCallEnded] = useState(false);
+    const [guestId, setGuestId] = useState('');
 
     // Notes state
     const [notes, setNotes] = useState<CallNotes | null>(null);
@@ -36,22 +37,47 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
     const [actionItems, setActionItems] = useState<ActionItem[]>([]);
     const [newActionText, setNewActionText] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [chatMessage, setChatMessage] = useState('');
 
     const hasMarkedStarted = useRef(false);
     const hasMarkedEnded = useRef(false);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const localVideoRef = useRef<HTMLVideoElement>(null);
+    const remoteVideoRef = useRef<HTMLVideoElement>(null);
+
+    // Initialize guest ID if not logged in
+    useEffect(() => {
+        if (!userProfile) {
+            const stored = localStorage.getItem('bookr_guest_id');
+            if (stored) {
+                setGuestId(stored);
+            } else {
+                const newId = `guest-${Date.now()}`;
+                localStorage.setItem('bookr_guest_id', newId);
+                setGuestId(newId);
+            }
+        }
+    }, [userProfile]);
 
     const {
         callState,
+        callMode,
         isMuted,
+        isVideoOff,
         callDuration,
         error,
+        localStream,
+        remoteStream,
+        messages,
         startCall,
         endCall,
         toggleMute,
-    } = useAudioCall({
+        toggleVideo,
+        sendMessage,
+    } = useCall({
         roomId,
         userName: userName || 'Guest',
+        userId: userProfile?.$id || guestId,
+        mode: 'video',
         onCallEnded: async () => {
             if (booking && !hasMarkedEnded.current) {
                 hasMarkedEnded.current = true;
@@ -64,6 +90,19 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
             setCallEnded(true);
         },
     });
+
+    // Attach streams to video elements
+    useEffect(() => {
+        if (localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream;
+        }
+    }, [localStream, hasJoined]);
+
+    useEffect(() => {
+        if (remoteVideoRef.current && remoteStream) {
+            remoteVideoRef.current.srcObject = remoteStream;
+        }
+    }, [remoteStream]);
 
     // Load booking data
     useEffect(() => {
@@ -160,11 +199,7 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
         setCallEnded(true);
     };
 
-    const toggleSpeakerMode = () => {
-        setSpeakerMode(!speakerMode);
-        // Note: Actual speaker/earpiece switching requires native app capabilities
-        // This is a visual toggle for web - actual audio routing is browser-controlled
-    };
+
 
     const saveNotes = async () => {
         if (!notes || !isHost) return;
@@ -442,188 +477,216 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
 
                     {/* In Call Screen */}
                     {hasJoined && !callEnded && (
-                        <motion.div
-                            key="incall"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-md"
-                        >
-                            {/* Call Card */}
-                            <div className="bg-white rounded-3xl shadow-xl border border-[#850000]/10 p-8 text-center">
-                                {/* Avatar with Status Ring */}
-                                <motion.div
-                                    className={`w-32 h-32 rounded-full mx-auto mb-6 flex items-center justify-center ${callState === 'connected'
-                                        ? 'bg-gradient-to-br from-green-400 to-green-500 ring-4 ring-green-200'
-                                        : 'bg-gradient-to-br from-[#850000] to-[#6b0000]'
-                                        }`}
-                                    animate={callState === 'waiting' ? { scale: [1, 1.05, 1] } : {}}
-                                    transition={{ repeat: Infinity, duration: 2 }}
-                                >
-                                    <span className="text-white text-5xl font-bold">
-                                        {isHost ? booking.guestName.charAt(0) : host?.name?.charAt(0) || '?'}
-                                    </span>
-                                </motion.div>
-
-                                <h2 className="text-xl font-bold text-[#1d0c0c] mb-1">
-                                    {isHost ? booking.guestName : host?.name || 'Host'}
-                                </h2>
-
-                                <p className={`text-sm font-medium mb-8 ${callState === 'connected' ? 'text-green-600' :
-                                    callState === 'waiting' ? 'text-[#850000]' :
-                                        callState === 'error' ? 'text-red-600' : 'text-[#6b4444]'
-                                    }`}>
-                                    {callState === 'connecting' && 'Connecting...'}
-                                    {callState === 'waiting' && 'Waiting for others...'}
-                                    {callState === 'connected' && 'Connected'}
-                                    {callState === 'error' && 'Connection failed'}
-                                </p>
-
-                                {/* Error Message */}
-                                {error && (
-                                    <div className="mb-6 p-3 bg-red-50 text-red-700 rounded-xl text-sm">
-                                        {error}
+                        <div className="fixed inset-0 bg-[#1d0c0c] text-white flex z-50">
+                            {/* Main Display (Remote Video) */}
+                            <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+                                {remoteStream ? (
+                                    <video
+                                        ref={remoteVideoRef}
+                                        autoPlay
+                                        playsInline
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="text-center">
+                                        <div className="w-32 h-32 rounded-full bg-[#850000] flex items-center justify-center mx-auto mb-4 text-4xl font-bold animate-pulse">
+                                            {isHost ? booking.guestName.charAt(0) : host?.name?.charAt(0) || '?'}
+                                        </div>
+                                        <p className="text-xl font-medium">{callState === 'connected' ? 'Audio only' : 'Connecting...'}</p>
                                     </div>
                                 )}
 
-                                {/* Call Duration */}
-                                {callState === 'connected' && (
-                                    <div className="text-5xl font-mono font-bold text-[#1d0c0c] mb-8">
-                                        {formatCallDuration(callDuration)}
-                                    </div>
-                                )}
-
-                                {/* Controls */}
-                                <div className="flex items-center justify-center gap-4">
-                                    {/* Mute Button */}
-                                    <motion.button
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={toggleMute}
-                                        className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${isMuted
-                                            ? 'bg-red-100 text-red-600'
-                                            : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'
-                                            }`}
-                                    >
-                                        <span className="material-symbols-outlined text-2xl">
-                                            {isMuted ? 'mic_off' : 'mic'}
-                                        </span>
-                                    </motion.button>
-
-                                    {/* End Call Button */}
-                                    <motion.button
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={handleEndCall}
-                                        className="w-20 h-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/30 hover:bg-red-600 transition-colors"
-                                    >
-                                        <span className="material-symbols-outlined text-3xl">call_end</span>
-                                    </motion.button>
-
-                                    {/* Speaker/Earpiece Toggle */}
-                                    <motion.button
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={toggleSpeakerMode}
-                                        className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all ${speakerMode
-                                            ? 'bg-[#850000] text-white'
-                                            : 'bg-[#850000]/10 text-[#850000] hover:bg-[#850000]/20'
-                                            }`}
-                                        title={speakerMode ? 'Speaker On' : 'Earpiece Mode'}
-                                    >
-                                        <span className="material-symbols-outlined text-2xl">
-                                            {speakerMode ? 'volume_up' : 'phone_in_talk'}
-                                        </span>
-                                    </motion.button>
+                                {/* Local Video (PIP) */}
+                                <div className="absolute bottom-24 right-6 w-32 h-48 bg-black/50 rounded-2xl overflow-hidden border border-white/20 shadow-xl backdrop-blur-sm">
+                                    {isVideoOff ? (
+                                        <div className="w-full h-full flex items-center justify-center bg-[#850000]">
+                                            <span className="text-2xl font-bold">You</span>
+                                        </div>
+                                    ) : (
+                                        <video
+                                            ref={localVideoRef}
+                                            autoPlay
+                                            playsInline
+                                            muted
+                                            className="w-full h-full object-cover mirror"
+                                            style={{ transform: 'scaleX(-1)' }}
+                                        />
+                                    )}
                                 </div>
 
-                                {/* Notes Toggle (Host Only) */}
-                                {isHost && callNotesService.isConfigured() && (
+                                {/* Call Controls (Floating Bottom) */}
+                                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-black/60 backdrop-blur-xl rounded-full border border-white/10">
                                     <button
-                                        onClick={() => setShowNotes(!showNotes)}
-                                        className="mt-6 text-sm text-[#6b4444] hover:text-[#850000] transition-colors flex items-center gap-1 mx-auto"
+                                        onClick={toggleMute}
+                                        className={`p-4 rounded-full transition-colors ${isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
+                                            }`}
                                     >
-                                        <span className="material-symbols-outlined text-lg">edit_note</span>
-                                        {showNotes ? 'Hide Notes' : 'Take Notes'}
+                                        <span className="material-symbols-outlined">{isMuted ? 'mic_off' : 'mic'}</span>
                                     </button>
-                                )}
-
-                                {/* Retry Button on Error */}
-                                {callState === 'error' && (
                                     <button
-                                        onClick={() => window.location.reload()}
-                                        className="mt-6 px-6 py-2 bg-[#850000] text-white rounded-xl font-medium"
+                                        onClick={toggleVideo}
+                                        className={`p-4 rounded-full transition-colors ${isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-white/10 hover:bg-white/20'
+                                            }`}
                                     >
-                                        Retry
+                                        <span className="material-symbols-outlined">{isVideoOff ? 'videocam_off' : 'videocam'}</span>
                                     </button>
-                                )}
+                                    <button
+                                        onClick={() => setShowChat(!showChat)}
+                                        className={`p-4 rounded-full transition-colors relative ${showChat ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20'
+                                            }`}
+                                    >
+                                        <span className="material-symbols-outlined">chat</span>
+                                        {messages.length > 0 && !showChat && (
+                                            <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1d0c0c]" />
+                                        )}
+                                    </button>
+                                    {isHost && (
+                                        <button
+                                            onClick={() => setShowNotes(!showNotes)}
+                                            className={`p-4 rounded-full transition-colors ${showNotes ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20'
+                                                }`}
+                                        >
+                                            <span className="material-symbols-outlined">edit_note</span>
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={handleEndCall}
+                                        className="p-4 rounded-full bg-red-600 hover:bg-red-700 transition-colors ml-4"
+                                    >
+                                        <span className="material-symbols-outlined">call_end</span>
+                                    </button>
+                                </div>
                             </div>
 
-                            {/* Notes Panel */}
+                            {/* Side Panel (Chat or Notes) */}
                             <AnimatePresence>
-                                {showNotes && isHost && (
+                                {(showChat || (showNotes && isHost)) && (
                                     <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        className="bg-white rounded-3xl shadow-xl border border-[#850000]/10 p-6 mt-4"
+                                        initial={{ width: 0, opacity: 0 }}
+                                        animate={{ width: 360, opacity: 1 }}
+                                        exit={{ width: 0, opacity: 0 }}
+                                        className="border-l border-white/10 bg-[#1d0c0c]/95 backdrop-blur-xl flex flex-col"
                                     >
-                                        <h3 className="font-bold text-[#1d0c0c] mb-4 flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-[#850000]">edit_note</span>
-                                            Call Notes
-                                            {isSaving && <span className="text-xs text-[#6b4444] ml-auto">Saving...</span>}
-                                        </h3>
-
-                                        {/* Summary */}
-                                        <div className="mb-4">
-                                            <label className="text-xs font-bold text-[#6b4444] uppercase tracking-wide">Summary</label>
-                                            <textarea
-                                                value={summary}
-                                                onChange={(e) => setSummary(e.target.value)}
-                                                onBlur={saveNotes}
-                                                placeholder="Key points discussed..."
-                                                className="w-full mt-1 p-3 bg-[#fcf8f8] border border-[#850000]/10 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#850000]/20"
-                                                rows={2}
-                                            />
+                                        {/* Header */}
+                                        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                                            <h3 className="font-bold text-lg">
+                                                {showChat ? 'Chat' : 'Notes'}
+                                            </h3>
+                                            <button
+                                                onClick={() => { setShowChat(false); setShowNotes(false); }}
+                                                className="hover:bg-white/10 p-1 rounded-lg"
+                                            >
+                                                <span className="material-symbols-outlined">close</span>
+                                            </button>
                                         </div>
 
-                                        {/* Action Items */}
-                                        <div>
-                                            <label className="text-xs font-bold text-[#6b4444] uppercase tracking-wide">Action Items</label>
-                                            <div className="mt-2 space-y-2">
-                                                {actionItems.map((item, index) => (
-                                                    <div key={index} className="flex items-center gap-2 p-2 bg-[#fcf8f8] rounded-lg">
-                                                        <button
-                                                            onClick={() => { toggleActionItem(index); saveNotes(); }}
-                                                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${item.completed ? 'bg-green-500 border-green-500 text-white' : 'border-[#850000]/30'
+                                        {/* Chat Content */}
+                                        {showChat && (
+                                            <>
+                                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                                    {messages.map((msg) => (
+                                                        <div
+                                                            key={msg.id}
+                                                            className={`flex flex-col ${msg.type === 'system' ? 'items-center' :
+                                                                msg.senderId === (userProfile?.$id || guestId) ? 'items-end' : 'items-start'
                                                                 }`}
                                                         >
-                                                            {item.completed && <span className="material-symbols-outlined text-xs">check</span>}
+                                                            {msg.type === 'system' ? (
+                                                                <span className="text-xs text-white/40 bg-white/5 px-2 py-1 rounded-full">
+                                                                    {msg.content}
+                                                                </span>
+                                                            ) : (
+                                                                <>
+                                                                    <div className={`max-w-[85%] p-3 rounded-2xl ${msg.senderId === (userProfile?.$id || guestId)
+                                                                        ? 'bg-[#850000] text-white rounded-tr-sm'
+                                                                        : 'bg-white/10 text-white rounded-tl-sm'
+                                                                        }`}>
+                                                                        {msg.content}
+                                                                    </div>
+                                                                    <span className="text-[10px] text-white/40 mt-1 px-1">
+                                                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="p-4 border-t border-white/10">
+                                                    <div className="flex items-center gap-2 bg-white/5 rounded-xl p-2 border border-white/10 focus-within:border-[#850000] transition-colors">
+                                                        <input
+                                                            type="text"
+                                                            value={chatMessage}
+                                                            onChange={(e) => setChatMessage(e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    sendMessage(chatMessage);
+                                                                    setChatMessage('');
+                                                                }
+                                                            }}
+                                                            placeholder="Type a message..."
+                                                            className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/40 text-sm px-2"
+                                                        />
+                                                        <button
+                                                            onClick={() => {
+                                                                sendMessage(chatMessage);
+                                                                setChatMessage('');
+                                                            }}
+                                                            disabled={!chatMessage.trim()}
+                                                            className="p-2 bg-[#850000] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#6b0000] transition-colors"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">send</span>
                                                         </button>
-                                                        <span className={`text-sm flex-1 ${item.completed ? 'line-through text-[#6b4444]' : 'text-[#1d0c0c]'}`}>
-                                                            {item.text}
-                                                        </span>
                                                     </div>
-                                                ))}
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={newActionText}
-                                                        onChange={(e) => setNewActionText(e.target.value)}
-                                                        onKeyDown={(e) => { if (e.key === 'Enter') { addActionItem(); saveNotes(); } }}
-                                                        placeholder="Add action item..."
-                                                        className="flex-1 p-2 bg-white border border-[#850000]/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#850000]/20"
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* Notes Content */}
+                                        {showNotes && isHost && (
+                                            <div className="flex-1 overflow-y-auto p-4 text-black">
+                                                <div className="bg-white rounded-xl p-4">
+                                                    {/* Notes functionality adapted for side panel */}
+                                                    <textarea
+                                                        value={summary}
+                                                        onChange={(e) => setSummary(e.target.value)}
+                                                        onBlur={saveNotes}
+                                                        placeholder="Quick summary..."
+                                                        className="w-full p-3 bg-[#fcf8f8] border border-[#850000]/10 rounded-xl text-sm h-32 mb-4"
                                                     />
-                                                    <button
-                                                        onClick={() => { addActionItem(); saveNotes(); }}
-                                                        className="px-3 py-2 bg-[#850000] text-white rounded-lg text-sm font-medium"
-                                                    >
-                                                        Add
-                                                    </button>
+                                                    <div className="space-y-2">
+                                                        {actionItems.map((item, index) => (
+                                                            <div key={index} className="flex items-center gap-2 text-sm">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={item.completed}
+                                                                    onChange={() => { toggleActionItem(index); saveNotes(); }}
+                                                                    className="accent-[#850000]"
+                                                                />
+                                                                <span className={item.completed ? 'line-through text-gray-400' : ''}>{item.text}</span>
+                                                            </div>
+                                                        ))}
+                                                        <div className="flex gap-2 mt-2">
+                                                            <input
+                                                                type="text"
+                                                                value={newActionText}
+                                                                onChange={(e) => setNewActionText(e.target.value)}
+                                                                onKeyDown={(e) => { if (e.key === 'Enter') { addActionItem(); saveNotes(); } }}
+                                                                placeholder="New item..."
+                                                                className="flex-1 p-2 border rounded-lg text-sm"
+                                                            />
+                                                            <button onClick={() => { addActionItem(); saveNotes(); }} className="px-3 bg-[#850000]/10 text-[#850000] rounded-lg text-xs font-bold">Add</button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-4 flex justify-between text-xs text-gray-500">
+                                                        <span>{isSaving ? 'Saving...' : 'Auto-saved'}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-                        </motion.div>
+                        </div>
                     )}
                 </AnimatePresence>
             </main>

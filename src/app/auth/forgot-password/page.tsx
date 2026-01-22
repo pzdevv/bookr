@@ -87,7 +87,7 @@ export default function ForgotPasswordPage() {
                     <div className="w-12 h-12 bg-gradient-to-br from-[#fbbd23] to-orange-400 rounded-2xl flex items-center justify-center shadow-lg">
                         <span className="material-symbols-outlined text-white text-2xl">lock_reset</span>
                     </div>
-                    <h2 className="auth-title text-2xl font-bold tracking-tight">Bookr</h2>
+                    <h2 className="auth-title text-2xl font-bold tracking-tight">Book&Call</h2>
                 </header>
 
                 {/* Main Card */}
@@ -179,7 +179,7 @@ export default function ForgotPasswordPage() {
                 {/* Footer */}
                 <footer className="auth-footer mt-8 text-center">
                     <div className="text-gray-400 text-xs font-medium">
-                        © 2026 Bookr Inc. All rights reserved.
+                        © 2026 Book&Call Inc. All rights reserved.
                     </div>
                 </footer>
             </div>

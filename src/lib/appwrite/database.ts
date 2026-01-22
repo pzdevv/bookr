@@ -88,7 +88,7 @@ export interface CallDocument {
     fileId: string;
     fileSize: number;
     fileType: string;
-    uploadedBy: 'host' | 'guest';
+    uploadedBy: 'host' | 'guests';
     $createdAt: string;
     $updatedAt: string;
 }
@@ -556,7 +556,7 @@ export const callDocumentsService = {
         callRoomId: string,
         hostId: string,
         guestEmail: string,
-        uploadedBy: 'host' | 'guest'
+        uploadedBy: 'host' | 'guests'
     ): Promise<CallDocument> {
         // Validate file type
         if (!ALLOWED_FILE_TYPES.includes(file.type)) {

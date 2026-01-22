@@ -9,12 +9,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Bookr - Modern Appointment Scheduling",
-  description: "Schedule appointments effortlessly with Bookr. The modern scheduling platform for professionals with free audio calls.",
+  title: "Book&Call - Modern Appointment Scheduling",
+  description: "Schedule appointments effortlessly with Book&Call. The modern scheduling platform for professionals with free audio calls.",
   keywords: ["scheduling", "appointments", "booking", "calendar", "meetings", "audio calls", "free"],
-  authors: [{ name: "Bookr" }],
-  creator: "Bookr",
-  publisher: "Bookr",
+  authors: [{ name: "Book&Call" }],
+  creator: "Book&Call",
+  publisher: "Book&Call",
   robots: "index, follow",
   icons: {
     icon: [
@@ -30,23 +30,23 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://bookr.app",
-    siteName: "Bookr",
-    title: "Bookr - Modern Appointment Scheduling",
-    description: "Schedule appointments effortlessly with Bookr. Free audio calls included.",
+    url: "https://bookandcall.app",
+    siteName: "Book&Call",
+    title: "Book&Call - Modern Appointment Scheduling",
+    description: "Schedule appointments effortlessly with Book&Call. Free audio calls included.",
     images: [
       {
         url: "/logo.png",
         width: 1200,
         height: 630,
-        alt: "Bookr - Modern Appointment Scheduling",
+        alt: "Book&Call - Modern Appointment Scheduling",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Bookr - Modern Appointment Scheduling",
-    description: "Schedule appointments effortlessly with Bookr. Free audio calls included.",
+    title: "Book&Call - Modern Appointment Scheduling",
+    description: "Schedule appointments effortlessly with Book&Call. Free audio calls included.",
     images: ["/logo.png"],
   },
 };
