@@ -660,3 +660,44 @@ export const callDocumentsService = {
     },
 };
 
+// ============================================
+// NEWSLETTER SERVICE
+// ============================================
+
+export interface NewsletterSubscriber {
+    $id: string;
+    email: string;
+    isActive: boolean;
+    $createdAt: string;
+    $updatedAt: string;
+}
+
+export const newsletterService = {
+    async subscribe(email: string): Promise<NewsletterSubscriber> {
+        // Check if already subscribed
+        try {
+            const existing = await databases.listDocuments(
+                databaseId,
+                'newsletters', // Assuming collection ID is 'newsletters' or using ID from config if added
+                [Query.equal('email', email)]
+            );
+
+            if (existing.documents.length > 0) {
+                return existing.documents[0] as unknown as NewsletterSubscriber;
+            }
+        } catch {
+            // Ignore error -> collection might not exist or permission issue, try create anyway
+        }
+
+        const result = await databases.createDocument(
+            databaseId,
+            'newsletters', // Hardcoding as it might not be in config type yet
+            ID.unique(),
+            {
+                email,
+                isActive: true
+            }
+        );
+        return result as unknown as NewsletterSubscriber;
+    }
+};
