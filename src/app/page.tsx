@@ -28,7 +28,8 @@ import {
   User,
   Check,
   Mail,
-  X
+  Send,
+  Loader2
 } from "lucide-react";
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Logo } from '@/components/ui/logo';
@@ -104,103 +105,6 @@ function Preloader({ onComplete }: PreloaderProps) {
       </div>
       <div className="progress-bar">
         <div ref={progressRef} className="progress-fill" />
-      </div>
-    </div>
-  );
-}
-
-// 2. Newsletter Modal
-interface NewsletterModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-function NewsletterModal({ isOpen, onClose }: NewsletterModalProps) {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      gsap.fromTo(modalRef.current,
-        { opacity: 0, scale: 0.95 },
-        { opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out' }
-      );
-    }
-  }, [isOpen]);
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    setStatus('loading');
-    try {
-      await newsletterService.subscribe(email);
-      setStatus('success');
-      setTimeout(() => {
-        onClose();
-        setStatus('idle');
-        setEmail('');
-      }, 2000);
-    } catch (error) {
-      console.error(error);
-      setStatus('error');
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div ref={modalRef} className="bg-white rounded-3xl p-8 max-w-md w-full relative z-10 shadow-2xl border border-gray-100">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
-
-        <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-2xl bg-[#850000]/10 flex items-center justify-center mb-6 text-[#850000]">
-            <Mail className="w-6 h-6" />
-          </div>
-
-          <h3 className="text-2xl font-bold font-heading mb-2">Join the waitlist</h3>
-          <p className="text-gray-500 mb-8">
-            Get exclusive updates on new features and early access opportunities.
-          </p>
-
-          {status === 'success' ? (
-            <div className="bg-green-50 text-green-600 px-6 py-4 rounded-xl font-medium w-full flex items-center justify-center gap-2">
-              <Check className="w-5 h-5" />
-              Subscribed successfully!
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="w-full space-y-4">
-              <div>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-5 py-4 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-[#850000]/20 focus:ring-4 focus:ring-[#850000]/5 transition-all outline-none"
-                  required
-                />
-                {status === 'error' && (
-                  <p className="text-red-500 text-sm mt-2 text-left">Something went wrong. Please try again.</p>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={status === 'loading'}
-                className="w-full py-4 bg-[#850000] text-white font-bold rounded-xl hover:bg-[#6b0000] active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {status === 'loading' ? 'Subscribing...' : 'Subscribe'}
-              </button>
-            </form>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -430,24 +334,9 @@ function HowItWorks() {
       }
 
       cardsRef.current.forEach((card, index) => {
-        if (!card) return;
-
-        gsap.fromTo(
-          card,
-          { opacity: 0, y: 50 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.7,
-            ease: "power2.out",
-            scrollTrigger: {
-              trigger: card,
-              start: "top 85%",
-              toggleActions: "play none none reverse",
-            },
-            delay: index * 0.1,
-          }
-        );
+        if (card) {
+          gsap.fromTo(card, { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.7, delay: index * 0.1, scrollTrigger: { trigger: card, start: "top 85%" } });
+        }
       });
     }, sectionRef);
 
@@ -918,7 +807,7 @@ function FinalCTA() {
   );
 }
 
-// 10. Footer
+// 10. Footer (With Brutalist Newsletter)
 const footerLinks = {
   product: [
     { label: "Features", href: "#features" },
@@ -937,11 +826,32 @@ const footerLinks = {
   ],
 };
 
-function Footer({ onNewsletterClick }: { onNewsletterClick: () => void }) {
+function Footer() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const handleSubscribe = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+
+    setStatus('loading');
+    try {
+      await newsletterService.subscribe(email);
+      setStatus('success');
+      setTimeout(() => {
+        setStatus('idle');
+        setEmail('');
+      }, 3000);
+    } catch (error) {
+      console.error(error);
+      setStatus('error');
+    }
+  };
+
   return (
     <footer className="bg-surface text-secondary border-t border-secondary/10 py-16">
       <div className="container-xl py-12">
-        <div className="grid md:grid-cols-4 gap-10">
+        <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-1">
             <div className="flex items-center gap-3 mb-4">
               <Logo size="sm" href="/" />
@@ -992,30 +902,48 @@ function Footer({ onNewsletterClick }: { onNewsletterClick: () => void }) {
             </ul>
           </div>
 
-          <div>
+          <div className="md:col-span-1">
             <h4 className="font-semibold text-sm uppercase tracking-wider text-secondary/50 mb-4">
-              Interact
+              Stay Updated
             </h4>
-            <ul className="space-y-3">
-              <li>
-                <button
-                  onClick={onNewsletterClick}
-                  className="text-secondary/70 hover:text-primary transition-colors text-sm text-left"
-                >
-                  Join Newsletter
-                </button>
-              </li>
-              {footerLinks.legal.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-secondary/70 hover:text-primary transition-colors text-sm"
+
+            {/* Brutalist Newsletter Form */}
+            <div className="border-2 border-primary shadow-[4px_4px_0px_0px_#850000] bg-white p-1">
+              {status === 'success' ? (
+                <div className="py-4 text-center text-green-600 font-bold flex items-center justify-center gap-2">
+                  <Check className="w-5 h-5" />
+                  <span>Joined!</span>
+                </div>
+              ) : (
+                <form onSubmit={handleSubscribe} className="flex">
+                  <div className="flex-1 flex items-center border-r-2 border-primary px-3 bg-gray-50">
+                    <Mail className="w-5 h-5 text-primary shrink-0" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Email"
+                      className="w-full bg-transparent border-none outline-none px-2 py-3 text-sm font-medium placeholder:text-gray-400 text-primary"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={status === 'loading'}
+                    className="px-4 hover:bg-primary/10 transition-colors disabled:opacity-50"
                   >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                    {status === 'loading' ? (
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                    ) : (
+                      <ArrowRight className="w-5 h-5 text-primary" />
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+            <p className="text-xs text-secondary/40 mt-3 font-medium">
+              No spam. Unsubscribe anytime.
+            </p>
           </div>
         </div>
 
@@ -1023,8 +951,16 @@ function Footer({ onNewsletterClick }: { onNewsletterClick: () => void }) {
           <div className="text-secondary/50 text-sm">
             © {new Date().getFullYear()} Book&Call. All rights reserved.
           </div>
-          <div className="text-secondary/50 text-sm">
-            bookncall.me
+          <div className="flex gap-4">
+            {footerLinks.legal.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="text-secondary/50 hover:text-primary transition-colors text-xs font-medium"
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
         </div>
       </div>
@@ -1036,7 +972,6 @@ function Footer({ onNewsletterClick }: { onNewsletterClick: () => void }) {
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [newsletterOpen, setNewsletterOpen] = useState(false);
   const { user, isLoading: isAuthLoading } = useAuth();
   const lenisRef = useRef<Lenis | null>(null);
 
@@ -1180,12 +1115,6 @@ export default function HomePage() {
       {/* Preloader */}
       {isLoading && <Preloader onComplete={handlePreloaderComplete} />}
 
-      {/* Newsletter Modal */}
-      <NewsletterModal
-        isOpen={newsletterOpen}
-        onClose={() => setNewsletterOpen(false)}
-      />
-
       {/* Content Wrapper */}
       <div
         style={{
@@ -1271,7 +1200,6 @@ export default function HomePage() {
             </div>
 
             {/* Calendar Preview with Floating Badges */}
-            {/* Changed overflow behavior to allow visibility */}
             <div ref={floatingBadgesRef} className="relative w-full max-w-4xl mx-auto mt-10 z-10">
               {/* Floating Badge - Left Top */}
               <div className="floating-badge absolute -top-6 left-2 md:left-8 bg-white rounded-2xl shadow-xl p-4 z-30 hidden sm:flex items-center gap-3">
@@ -1375,14 +1303,12 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 3. New Sections */}
-        {/* TrustStrip is now inside Hero */}
         <Features />
         <HowItWorks />
         <ScrollText />
         <ProductDemo />
         <FinalCTA />
-        <Footer onNewsletterClick={() => setNewsletterOpen(true)} />
+        <Footer />
       </div>
     </main>
   );
