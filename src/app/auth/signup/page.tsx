@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { gsap } from 'gsap';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Logo } from '@/components/ui/logo';
 import { checkRateLimit, AUTH_RATE_LIMITS, formatResetTime } from '@/lib/security/rate-limit';
 
 export default function SignUpPage() {
+    const router = useRouter();
     const { signUp, signInWithGoogle } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -77,7 +79,7 @@ export default function SignUpPage() {
 
         try {
             await signUp(email, password, name);
-            window.location.href = '/auth/verify-email';
+            router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`);
         } catch (err: any) {
             console.error('Signup error:', err);
             setError(err.message || 'Failed to create account');

@@ -21,7 +21,7 @@ export default function DashboardPage() {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [eventTypes, setEventTypes] = useState<EventType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [stats, setStats] = useState({ total: 0, upcoming: 0, week: 0 });
+    const [stats, setStats] = useState({ total: 0, upcoming: 0, week: 0, pending: 0 });
     const [copied, setCopied] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [error, setError] = useState('');
@@ -76,6 +76,7 @@ export default function DashboardPage() {
                     total: allBookings.length,
                     upcoming: upcomingBookings.length,
                     week: weekBookings.length,
+                    pending: allBookings.filter(b => b.status === 'pending').length
                 });
             } catch (error: any) {
                 console.error('Dashboard load error:', error);
@@ -364,7 +365,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Stats Grid */}
-                <div ref={statsRef} className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div ref={statsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="stat-card bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                         <div className="flex items-center justify-between mb-4">
                             <div className="w-12 h-12 rounded-xl bg-[#850000]/10 flex items-center justify-center">
@@ -374,6 +375,17 @@ export default function DashboardPage() {
                         </div>
                         <p className="text-4xl font-extrabold text-[#1d0c0c] tracking-tight">{stats.total}</p>
                         <p className="text-sm font-medium text-gray-500 mt-1">Total Bookings</p>
+                    </div>
+
+                    <div className="stat-card bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-orange-600 text-2xl">hourglass_empty</span>
+                            </div>
+                            <span className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full">ACTION NEEDED</span>
+                        </div>
+                        <p className="text-4xl font-extrabold text-[#1d0c0c] tracking-tight">{stats.pending}</p>
+                        <p className="text-sm font-medium text-gray-500 mt-1">Pending Requests</p>
                     </div>
 
                     <div className="stat-card bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">

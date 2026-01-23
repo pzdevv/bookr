@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '@/components/dashboard/layout';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { bookingService, Booking } from '@/lib/appwrite/database';
+import { bookingService, Booking, eventTypeService } from '@/lib/appwrite/database';
+import { generateBookingConfirmationEmail, generateBookingRejectedEmail, sendEmail } from '@/lib/services/email';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -15,7 +16,7 @@ export default function BookingsPage() {
     const { userProfile } = useAuth();
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'cancelled'>('upcoming');
+    const [activeTab, setActiveTab] = useState<'upcoming' | 'pending' | 'past' | 'cancelled'>('upcoming');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
     const [isActionLoading, setIsActionLoading] = useState(false);
@@ -107,7 +108,9 @@ export default function BookingsPage() {
 
         switch (activeTab) {
             case 'upcoming':
-                return bookingDate >= now && b.status !== 'cancelled';
+                return bookingDate >= now && b.status === 'confirmed';
+            case 'pending':
+                return bookingDate >= now && b.status === 'pending';
             case 'past':
                 return bookingDate < now && b.status !== 'cancelled';
             case 'cancelled':
@@ -118,9 +121,86 @@ export default function BookingsPage() {
     });
 
     const counts = {
-        upcoming: bookings.filter(b => new Date(b.slotTime) >= now && b.status !== 'cancelled').length,
+        upcoming: bookings.filter(b => new Date(b.slotTime) >= now && b.status === 'confirmed').length,
+        pending: bookings.filter(b => new Date(b.slotTime) >= now && b.status === 'pending').length,
         past: bookings.filter(b => new Date(b.slotTime) < now && b.status !== 'cancelled').length,
         cancelled: bookings.filter(b => b.status === 'cancelled').length,
+    };
+
+    const handleConfirm = async (booking: Booking) => {
+        setIsActionLoading(true);
+        try {
+            // Update status
+            await bookingService.update(booking.$id, { status: 'confirmed' });
+
+            // Get event details for email
+            let eventTitle = 'Meeting';
+            if (booking.eventTypeId) {
+                const eventType = await eventTypeService.get(booking.eventTypeId);
+                if (eventType) eventTitle = eventType.title;
+            }
+
+            // Send confirmation email
+            const emailData = {
+                guestName: booking.guestName,
+                guestEmail: booking.guestEmail,
+                hostName: userProfile?.name || 'Host',
+                hostEmail: userProfile?.email || '',
+                eventTitle,
+                slotTime: booking.slotTime,
+                duration: 30, // Default duration, should fetch from event type really
+                callLink: `${window.location.origin}/call/${booking.callRoomId}`,
+                notes: booking.notes
+            };
+
+            // Send email (fire and forget for UI responsiveness, or await if critical)
+            const email = generateBookingConfirmationEmail(emailData);
+            await sendEmail(booking.guestEmail, email);
+
+            // Update local state
+            setBookings(prev => prev.map(b => b.$id === booking.$id ? { ...b, status: 'confirmed' as const } : b));
+            setSelectedBooking(null);
+
+            // Success feedback
+            alert('Booking confirmed and email sent!');
+        } catch (error) {
+            console.error('Error confirming:', error);
+            alert('Failed to confirm booking');
+        } finally { setIsActionLoading(false); }
+    };
+
+    const handleDecline = async (booking: Booking) => {
+        if (!confirm('Are you sure you want to decline this booking?')) return;
+
+        setIsActionLoading(true);
+        try {
+            await bookingService.update(booking.$id, { status: 'cancelled' });
+
+            // Get event details
+            let eventTitle = 'Meeting';
+            if (booking.eventTypeId) {
+                const eventType = await eventTypeService.get(booking.eventTypeId);
+                if (eventType) eventTitle = eventType.title;
+            }
+
+            // Send rejection email
+            const emailData = {
+                guestName: booking.guestName,
+                guestEmail: booking.guestEmail,
+                hostName: userProfile?.name || 'Host',
+                hostEmail: userProfile?.email || '',
+                eventTitle,
+                slotTime: booking.slotTime,
+                duration: 30,
+            };
+
+            const email = generateBookingRejectedEmail(emailData);
+            await sendEmail(booking.guestEmail, email);
+
+            setBookings(prev => prev.map(b => b.$id === booking.$id ? { ...b, status: 'cancelled' as const } : b));
+            setSelectedBooking(null);
+        } catch (error) { console.error('Error declining:', error); }
+        finally { setIsActionLoading(false); }
     };
 
     const handleCancel = async (bookingId: string) => {
@@ -168,7 +248,7 @@ export default function BookingsPage() {
         return `In ${diffDays} days`;
     };
 
-    const handleTabChange = (tab: 'upcoming' | 'past' | 'cancelled') => {
+    const handleTabChange = (tab: 'upcoming' | 'pending' | 'past' | 'cancelled') => {
         // Animate out current cards
         gsap.to('.booking-card', {
             opacity: 0,
@@ -214,8 +294,8 @@ export default function BookingsPage() {
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex gap-2 mt-6">
-                        {(['upcoming', 'past', 'cancelled'] as const).map((tab) => (
+                    <div className="flex gap-2 mt-6 overflow-x-auto pb-2 scrollbar-none">
+                        {(['upcoming', 'pending', 'past', 'cancelled'] as const).map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => handleTabChange(tab)}
@@ -254,7 +334,7 @@ export default function BookingsPage() {
                     >
                         <div className="w-20 h-20 bg-[#850000]/10 rounded-xl flex items-center justify-center mx-auto mb-5 shadow-[2px_2px_0px_0px_rgba(133,0,0,0.1)]">
                             <span className="material-symbols-outlined text-[#850000]/40 text-4xl">
-                                {activeTab === 'cancelled' ? 'event_busy' : activeTab === 'past' ? 'history' : 'event_available'}
+                                {activeTab === 'cancelled' ? 'event_busy' : activeTab === 'past' ? 'history' : activeTab === 'pending' ? 'pending_actions' : 'event_available'}
                             </span>
                         </div>
                         <h3 className="font-bold text-[#1d0c0c] text-xl mb-2">
@@ -327,6 +407,11 @@ export default function BookingsPage() {
                                                             CANCELLED
                                                         </span>
                                                     )}
+                                                    {booking.status === 'pending' && (
+                                                        <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2.5 py-1 rounded-md">
+                                                            PENDING REQUEST
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <p className="text-[#6b4444] text-sm truncate">{booking.guestEmail}</p>
 
@@ -364,6 +449,25 @@ export default function BookingsPage() {
                                                             <span className="material-symbols-outlined text-lg">more_horiz</span>
                                                         </button>
                                                     </>
+
+                                                )}
+                                                {booking.status === 'pending' && (
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleConfirm(booking); }}
+                                                            className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                                                            title="Confirm Booking"
+                                                        >
+                                                            <span className="material-symbols-outlined">check</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDecline(booking); }}
+                                                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                                            title="Decline Booking"
+                                                        >
+                                                            <span className="material-symbols-outlined">close</span>
+                                                        </button>
+                                                    </div>
                                                 )}
                                                 {!isUpcoming && booking.status !== 'cancelled' && (
                                                     <span className="flex items-center gap-1.5 text-sm text-[#6b4444] bg-[#850000]/5 px-4 py-2 rounded-lg">
@@ -375,13 +479,15 @@ export default function BookingsPage() {
                                         </div>
 
                                         {/* Notes preview if any */}
-                                        {booking.notes && (
-                                            <div className="px-5 pb-4 -mt-1">
-                                                <p className="text-sm text-[#6b4444] bg-[#850000]/5 rounded-lg px-3 py-2 line-clamp-1">
-                                                    <span className="text-[#850000]">Note:</span> {booking.notes}
-                                                </p>
-                                            </div>
-                                        )}
+                                        {
+                                            booking.notes && (
+                                                <div className="px-5 pb-4 -mt-1">
+                                                    <p className="text-sm text-[#6b4444] bg-[#850000]/5 rounded-lg px-3 py-2 line-clamp-1">
+                                                        <span className="text-[#850000]">Note:</span> {booking.notes}
+                                                    </p>
+                                                </div>
+                                            )
+                                        }
                                     </motion.div>
                                 );
                             })}
@@ -461,7 +567,8 @@ export default function BookingsPage() {
                                         </span>
                                         {selectedBooking.status === 'cancelled' ? 'Cancelled' :
                                             new Date(selectedBooking.slotTime) < now ? 'Completed' :
-                                                'Upcoming'}
+                                                selectedBooking.status === 'pending' ? 'Pending Approval' :
+                                                    'Upcoming'}
                                     </p>
                                 </div>
 
@@ -510,6 +617,25 @@ export default function BookingsPage() {
                                         </div>
                                     </>
                                 )}
+
+                                {selectedBooking.status === 'pending' && new Date(selectedBooking.slotTime) >= now && (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            onClick={() => handleDecline(selectedBooking)}
+                                            disabled={isActionLoading}
+                                            className="py-3 rounded-lg bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-all disabled:opacity-50"
+                                        >
+                                            {isActionLoading ? 'Processing...' : 'Decline'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleConfirm(selectedBooking)}
+                                            disabled={isActionLoading}
+                                            className="py-3 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 transition-all disabled:opacity-50 shadow-md"
+                                        >
+                                            {isActionLoading ? 'Processing...' : 'Confirm Request'}
+                                        </button>
+                                    </div>
+                                )}
                                 {(new Date(selectedBooking.slotTime) < now || selectedBooking.status === 'cancelled') && (
                                     <button
                                         onClick={() => setSelectedBooking(null)}
@@ -523,6 +649,6 @@ export default function BookingsPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </DashboardLayout>
+        </DashboardLayout >
     );
 }

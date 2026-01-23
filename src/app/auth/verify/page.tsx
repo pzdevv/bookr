@@ -25,9 +25,9 @@ function VerifyContent() {
             try {
                 await authService.verifyEmail(userId, secret);
                 setStatus('success');
-                setMessage('Your email has been verified successfully!');
-                // Redirect to dashboard after 3 seconds
-                setTimeout(() => router.push('/dashboard'), 3000);
+                setMessage('Your email has been verified successfully! Redirecting to login...');
+                // Redirect to login after 3 seconds
+                setTimeout(() => router.push('/auth/login?verified=true'), 3000);
             } catch (error: any) {
                 setStatus('error');
                 setMessage(error.message || 'Verification failed. Please try again.');

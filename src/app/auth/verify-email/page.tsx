@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { gsap } from 'gsap';
 import { authService } from '@/lib/appwrite/auth';
+import { ResendModal } from '@/components/ui/resend-modal';
 
 export default function VerifyEmailPendingPage() {
     const containerRef = useRef<HTMLDivElement>(null);
+    const [isResendModalOpen, setIsResendModalOpen] = useState(false);
 
     useEffect(() => {
         const ctx = gsap.context(() => {
@@ -26,16 +28,6 @@ export default function VerifyEmailPendingPage() {
 
         return () => ctx.revert();
     }, []);
-
-    const handleResendEmail = async () => {
-        try {
-            await authService.sendVerificationEmail();
-            alert('Verification email sent! Check your inbox.');
-        } catch (error) {
-            console.error('Failed to resend:', error);
-            alert('Failed to resend email. Please try again.');
-        }
-    };
 
     return (
         <div ref={containerRef} className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4 font-[Inter,sans-serif]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
@@ -76,7 +68,7 @@ export default function VerifyEmailPendingPage() {
 
                     <div className="flex flex-col sm:flex-row gap-3">
                         <button
-                            onClick={handleResendEmail}
+                            onClick={() => setIsResendModalOpen(true)}
                             className="flex-1 py-3 px-4 rounded-xl bg-white border border-[#850000]/10 text-[#6b4444] font-medium text-sm hover:bg-[#850000]/5 hover:text-[#850000] transition-all flex items-center justify-center gap-2"
                         >
                             <span className="material-symbols-outlined text-lg">refresh</span>
@@ -93,7 +85,7 @@ export default function VerifyEmailPendingPage() {
 
                     <p className="text-xs text-[#6b4444]/60 mt-6">
                         Didn't receive it? Check your spam folder or{' '}
-                        <button onClick={handleResendEmail} className="text-[#850000] font-medium hover:underline">
+                        <button onClick={() => setIsResendModalOpen(true)} className="text-[#850000] font-medium hover:underline">
                             resend verification email
                         </button>
                     </p>
@@ -108,6 +100,11 @@ export default function VerifyEmailPendingPage() {
                     </span>
                 </p>
             </div>
+
+            <ResendModal
+                isOpen={isResendModalOpen}
+                onClose={() => setIsResendModalOpen(false)}
+            />
         </div>
     );
 }

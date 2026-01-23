@@ -87,7 +87,7 @@ export const AUTH_RATE_LIMITS = {
     login: { maxAttempts: 5, windowMs: 60 * 1000 }, // 5 attempts per minute
     signup: { maxAttempts: 3, windowMs: 60 * 1000 }, // 3 signups per minute
     passwordReset: { maxAttempts: 3, windowMs: 5 * 60 * 1000 }, // 3 per 5 minutes
-    resendVerification: { maxAttempts: 3, windowMs: 5 * 60 * 1000 }, // 3 per 5 minutes
+    resendVerification: { maxAttempts: 2, windowMs: 5 * 60 * 1000 }, // 2 per 5 minutes
 };
 
 /**

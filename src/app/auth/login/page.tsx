@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { gsap } from 'gsap';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Logo } from '@/components/ui/logo';
 import { checkRateLimit, AUTH_RATE_LIMITS, formatResetTime } from '@/lib/security/rate-limit';
 
 export default function LoginPage() {
+    const router = useRouter();
     const { signIn, signInWithGoogle } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -59,7 +61,8 @@ export default function LoginPage() {
 
         try {
             await signIn(email, password);
-            window.location.href = '/dashboard';
+            router.push('/dashboard');
+        } catch (err: any) {
         } catch (err: any) {
             console.error('Login error:', err);
             const errorMessage = err?.message || 'Invalid credentials. Please check the email and password.';
