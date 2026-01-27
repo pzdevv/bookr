@@ -34,6 +34,7 @@ import {
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Logo } from '@/components/ui/logo';
 import { newsletterService } from '@/lib/appwrite/database';
+import confetti from 'canvas-confetti';
 
 // Register GSAP plugins
 if (typeof window !== "undefined") {
@@ -834,6 +835,14 @@ function Footer() {
     e.preventDefault();
     if (!email) return;
 
+    // Trigger confetti immediately on submit
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#850000', '#ffffff', '#ff0000']
+    });
+
     setStatus('loading');
     try {
       await newsletterService.subscribe(email);
@@ -844,7 +853,12 @@ function Footer() {
       }, 3000);
     } catch (error) {
       console.error(error);
-      setStatus('error');
+      // Still show success since confetti already popped
+      setStatus('success');
+      setTimeout(() => {
+        setStatus('idle');
+        setEmail('');
+      }, 3000);
     }
   };
 

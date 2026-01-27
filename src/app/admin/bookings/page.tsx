@@ -53,10 +53,10 @@ export default function AdminBookingsPage() {
 
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'confirmed': return <Badge variant="success" className="gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />Confirmed</Badge>;
-            case 'completed': return <Badge variant="secondary" className="gap-1"><Check className="w-3 h-3" />Completed</Badge>;
-            case 'cancelled': return <Badge variant="destructive" className="gap-1"><X className="w-3 h-3" />Cancelled</Badge>;
-            default: return <Badge variant="outline">Pending</Badge>;
+            case 'confirmed': return <Badge variant="success" className="gap-1 bg-green-100 text-green-700 hover:bg-green-200 border-green-200"><Check className="w-3 h-3" />Confirmed</Badge>;
+            case 'completed': return <Badge variant="secondary" className="gap-1 bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200"><Check className="w-3 h-3" />Completed</Badge>;
+            case 'cancelled': return <Badge variant="destructive" className="gap-1 bg-red-100 text-red-700 hover:bg-red-200 border-red-200"><X className="w-3 h-3" />Cancelled</Badge>;
+            default: return <Badge variant="outline" className="gap-1 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border-yellow-200"><Clock className="w-3 h-3" />Pending</Badge>;
         }
     };
 
@@ -123,10 +123,10 @@ export default function AdminBookingsPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
                                     transition={{ delay: index * 0.03 }}
-                                    className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-white border border-gray-100 hover:border-yellow-200 transition-all"
+                                    className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-white border border-gray-100 hover:border-[#850000]/20 hover:shadow-sm transition-all"
                                 >
-                                    <Avatar className="w-12 h-12 border-2 border-yellow-100 flex-shrink-0">
-                                        <AvatarFallback className="bg-gradient-to-br from-yellow-100 to-orange-100 text-yellow-800 font-semibold">{booking.guestName.charAt(0)}</AvatarFallback>
+                                    <Avatar className="w-12 h-12 border-2 border-gray-100 flex-shrink-0">
+                                        <AvatarFallback className="bg-gradient-to-br from-[#850000]/10 to-[#850000]/20 text-[#850000] font-bold">{booking.guestName.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-semibold text-gray-900">{booking.guestName}</p>
@@ -143,7 +143,28 @@ export default function AdminBookingsPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3 flex-shrink-0">
+                                        {/* Quick Actions for Pending */}
+                                        {booking.status === 'pending' && (
+                                            <div className="flex items-center gap-2 mr-2">
+                                                <button
+                                                    onClick={() => updateStatus(booking.$id, 'confirmed')}
+                                                    className="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors"
+                                                    title="Confirm Booking"
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => { setSelectedBooking(booking); setIsCancelDialogOpen(true); }}
+                                                    className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-100 transition-colors"
+                                                    title="Reject Booking"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
+
                                         {getStatusBadge(booking.status)}
+
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-400" aria-label="Actions">
@@ -151,6 +172,12 @@ export default function AdminBookingsPage() {
                                                 </button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
+                                                {booking.status === 'pending' && (
+                                                    <DropdownMenuItem onClick={() => updateStatus(booking.$id, 'confirmed')}>
+                                                        <Check className="w-4 h-4 mr-2 text-green-500" aria-hidden="true" />
+                                                        Confirm Booking
+                                                    </DropdownMenuItem>
+                                                )}
                                                 {booking.status === 'confirmed' && (
                                                     <DropdownMenuItem onClick={() => updateStatus(booking.$id, 'completed')}>
                                                         <Check className="w-4 h-4 mr-2 text-green-500" aria-hidden="true" />
@@ -163,7 +190,7 @@ export default function AdminBookingsPage() {
                                                     onClick={() => { setSelectedBooking(booking); setIsCancelDialogOpen(true); }}
                                                 >
                                                     <X className="w-4 h-4 mr-2" aria-hidden="true" />
-                                                    Cancel Booking
+                                                    {booking.status === 'pending' ? 'Reject Booking' : 'Cancel Booking'}
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -175,13 +202,13 @@ export default function AdminBookingsPage() {
                 </div>
             )}
 
-            {/* Cancel Dialog */}
+            {/* Cancel/Reject Dialog */}
             <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Cancel Booking</DialogTitle>
+                        <DialogTitle>{selectedBooking?.status === 'pending' ? 'Reject Booking' : 'Cancel Booking'}</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to cancel the booking with {selectedBooking?.guestName}?
+                            Are you sure you want to {selectedBooking?.status === 'pending' ? 'reject' : 'cancel'} the booking with {selectedBooking?.guestName}?
                             They will be notified via email.
                         </DialogDescription>
                     </DialogHeader>
@@ -194,7 +221,7 @@ export default function AdminBookingsPage() {
                             onClick={() => selectedBooking && updateStatus(selectedBooking.$id, 'cancelled')}
                             className="rounded-full"
                         >
-                            Cancel Booking
+                            {selectedBooking?.status === 'pending' ? 'Reject Booking' : 'Cancel Booking'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

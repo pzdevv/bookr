@@ -63,11 +63,11 @@ export default function LoginPage() {
             await signIn(email, password);
             router.push('/dashboard');
         } catch (err: any) {
-        } catch (err: any) {
             console.error('Login error:', err);
             const errorMessage = err?.message || 'Invalid credentials. Please check the email and password.';
             setError(errorMessage);
             gsap.fromTo('.glass-card', { x: -10 }, { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' });
+        } finally {
             setIsLoading(false);
         }
     };

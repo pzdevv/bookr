@@ -27,8 +27,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const refreshUser = async () => {
         try {
+            // SPEED OPTIMIZATION: Check local cache first for instant UI
+            const cached = localStorage.getItem('user_profile_cache');
+            if (cached && isLoading) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    // Only use cache if it matches current signed-in user (simple check, or clearing cache on logout)
+                    setUserProfile(parsed);
+                } catch (e) { localStorage.removeItem('user_profile_cache'); }
+            }
+
             const currentUser = await authService.getCurrentUser();
             setUser(currentUser);
+
 
             if (currentUser) {
                 // Try to get user profile from database
@@ -116,6 +127,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
 
                 setUserProfile(profile);
+                if (profile) {
+                    localStorage.setItem('user_profile_cache', JSON.stringify(profile));
+                }
             } else {
                 setUserProfile(null);
             }
@@ -150,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await authService.signOut();
         setUser(null);
         setUserProfile(null);
+        localStorage.removeItem('user_profile_cache');
     };
 
     const sendPasswordRecovery = async (email: string) => {

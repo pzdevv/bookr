@@ -9,6 +9,7 @@ import { eventTypeService, availabilityService, bookingService, userService, gen
 import { formatTime, getTimeSlots, getUserTimezone } from '@/lib/utils';
 import { sanitizeName, sanitizeEmail, sanitizeMultiline } from '@/lib/utils/sanitize';
 import { Logo } from '@/components/ui/logo';
+import confetti from 'canvas-confetti';
 
 export default function BookEventPage({ params }: { params: Promise<{ username: string; eventSlug: string }> }) {
     const { username, eventSlug } = use(params);
@@ -121,10 +122,19 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                 guestName: cleanName,
                 guestEmail: cleanEmail,
                 slotTime: slotDateTime.toISOString(),
-                status: 'confirmed',
+                status: 'pending',
                 notes: cleanNotes,
                 callRoomId,
             });
+
+            // Trigger confetti celebration
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#850000', '#ffffff', '#ff0000']
+            });
+
             router.push(`/book/${username}/${eventSlug}/confirm?date=${slotDateTime.toISOString()}&name=${encodeURIComponent(cleanName)}&duration=${eventType.duration}&room=${callRoomId}`);
         } catch (err) {
             console.error('Error booking:', err);

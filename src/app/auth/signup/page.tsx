@@ -127,7 +127,7 @@ export default function SignUpPage() {
             </div>
 
             {/* Main Content */}
-            <main className="relative pb-20 flex items-center justify-center px-4">
+            <main className="relative z-10 w-full flex flex-col items-center justify-center p-4 py-12 lg:py-20">
                 <div className="w-full max-w-6xl">
                     {/* Glass Island Card */}
                     <div
