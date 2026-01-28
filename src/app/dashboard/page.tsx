@@ -175,10 +175,8 @@ export default function DashboardPage() {
             };
 
             const email = generateBookingConfirmationEmail(emailData);
-            // Fire and forget - don't await email sending
-            sendEmail(booking.guestEmail, email).catch(err =>
-                console.error('Email send failed:', err)
-            );
+            // Fire and forget - errors handled internally
+            sendEmail(booking.guestEmail, email);
         } catch (error) {
             console.error('Error confirming:', error);
             // Rollback
@@ -217,10 +215,8 @@ export default function DashboardPage() {
             };
 
             const email = generateBookingRejectedEmail(emailData);
-            // Fire and forget - don't await email sending
-            sendEmail(booking.guestEmail, email).catch(err =>
-                console.error('Email send failed:', err)
-            );
+            // Fire and forget - errors handled internally
+            sendEmail(booking.guestEmail, email);
         } catch (error) {
             console.error('Error declining:', error);
             // Rollback

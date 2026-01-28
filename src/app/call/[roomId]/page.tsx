@@ -7,7 +7,7 @@ import { use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCall, formatCallDuration } from '@/lib/hooks/use-call';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { bookingService, userService, eventTypeService, markCallStarted, markCallEnded, isCallExpired, callNotesService, callDocumentsService, Booking, User, EventType, CallNotes, CallDocument, ActionItem } from '@/lib/appwrite/database';
+import { bookingService, userService, eventTypeService, markCallStarted, markCallEnded, isCallExpired, isCallTooEarly, callNotesService, callDocumentsService, Booking, User, EventType, CallNotes, CallDocument, ActionItem } from '@/lib/appwrite/database';
 import { sanitizeMultiline, sanitizeText } from '@/lib/utils/sanitize';
 import { Logo } from '@/components/ui/logo';
 
@@ -21,6 +21,7 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
     const [previousCalls, setPreviousCalls] = useState<CallNotes[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isExpired, setIsExpired] = useState(false);
+    const [isTooEarly, setIsTooEarly] = useState(false);
     const [userName, setUserName] = useState('');
     const [hasJoined, setHasJoined] = useState(false);
     const [isHost, setIsHost] = useState(false);
@@ -114,6 +115,20 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                 if (foundBooking) {
                     if (isCallExpired(foundBooking)) {
                         setIsExpired(true);
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    if (isCallTooEarly(foundBooking)) {
+                        setIsTooEarly(true);
+                        setBooking(foundBooking);
+                        // Still load host/event for display
+                        const [foundHost, foundEventType] = await Promise.all([
+                            userService.get(foundBooking.userId),
+                            eventTypeService.get(foundBooking.eventTypeId),
+                        ]);
+                        setHost(foundHost);
+                        setEventType(foundEventType);
                         setIsLoading(false);
                         return;
                     }
@@ -296,6 +311,48 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                         <span className="material-symbols-outlined">home</span>
                         Go Home
                     </Link>
+                </motion.div>
+            </div>
+        );
+    }
+
+    // Too Early State
+    if (isTooEarly && booking) {
+        const slotTime = new Date(booking.slotTime);
+        const minutesUntil = Math.ceil((slotTime.getTime() - Date.now()) / 60000);
+        return (
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.03) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-3xl shadow-xl border border-[#850000]/10 p-10 max-w-md text-center"
+                >
+                    <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <span className="material-symbols-outlined text-blue-500 text-4xl">hourglass_top</span>
+                    </div>
+                    <h1 className="text-2xl font-bold text-[#1d0c0c] mb-2">Too Early to Join</h1>
+                    <p className="text-[#6b4444] mb-4">
+                        Your call with <strong>{host?.name || 'Host'}</strong> is scheduled for:
+                    </p>
+                    <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                        <p className="text-lg font-bold text-[#1d0c0c]">
+                            {slotTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                        </p>
+                        <p className="text-[#850000] font-semibold">
+                            {slotTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                        </p>
+                    </div>
+                    <p className="text-[#6b4444] mb-6">
+                        You can join <strong>15 minutes</strong> before your scheduled time.<br />
+                        <span className="text-sm">({minutesUntil} minutes remaining)</span>
+                    </p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="inline-flex items-center gap-2 px-8 py-3 bg-[#850000] text-white font-bold rounded-xl hover:bg-[#6b0000] transition-all"
+                    >
+                        <span className="material-symbols-outlined">refresh</span>
+                        Check Again
+                    </button>
                 </motion.div>
             </div>
         );

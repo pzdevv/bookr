@@ -3,6 +3,7 @@
  * Uses Appwrite's messaging service or can be replaced with external providers
  */
 import { functions } from '@/lib/appwrite/config';
+import { ExecutionMethod } from 'appwrite';
 
 export interface BookingEmailData {
     guestName: string;
@@ -58,9 +59,7 @@ export function generateBookingConfirmationEmail(data: BookingEmailData): EmailT
     <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 32px;">
-            <div style="display: inline-block; background: linear-gradient(135deg, #850000, #6b0000); padding: 16px 24px; border-radius: 16px;">
-                <span style="color: white; font-size: 24px; font-weight: 800;">📅 Book&Call</span>
-            </div>
+            <img src="https://bookncall.me/logo.png" alt="Book&Call" style="height: 48px; width: auto;" />
         </div>
         
         <!-- Main Card -->
@@ -130,9 +129,15 @@ export function generateBookingConfirmationEmail(data: BookingEmailData): EmailT
         </div>
         
         <!-- Footer -->
-        <div style="text-align: center; margin-top: 32px;">
-            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                Powered by <strong style="color: #850000;">Book&Call</strong>
+        <div style="text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px;">
+                Book&Call — Professional Scheduling
+            </p>
+            <p style="color: #9ca3af; font-size: 11px; margin: 0 0 8px;">
+                Questions? Contact us at <a href="mailto:contact@bookncall.me" style="color: #850000; text-decoration: none;">contact@bookncall.me</a>
+            </p>
+            <p style="color: #9ca3af; font-size: 10px; margin: 0;">
+                You're receiving this because you booked a meeting via Book&Call.
             </p>
         </div>
     </div>
@@ -179,9 +184,7 @@ export function generateBookingRejectedEmail(data: BookingEmailData, reason?: st
     <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 32px;">
-            <div style="display: inline-block; background: linear-gradient(135deg, #850000, #6b0000); padding: 16px 24px; border-radius: 16px;">
-                <span style="color: white; font-size: 24px; font-weight: 800;">📅 Book&Call</span>
-            </div>
+            <img src="https://bookncall.me/logo.png" alt="Book&Call" style="height: 48px; width: auto;" />
         </div>
         
         <!-- Main Card -->
@@ -226,9 +229,15 @@ export function generateBookingRejectedEmail(data: BookingEmailData, reason?: st
         </div>
         
         <!-- Footer -->
-        <div style="text-align: center; margin-top: 32px;">
-            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                Powered by <strong style="color: #850000;">Book&Call</strong>
+        <div style="text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px;">
+                Book&Call — Professional Scheduling
+            </p>
+            <p style="color: #9ca3af; font-size: 11px; margin: 0 0 8px;">
+                Questions? Contact us at <a href="mailto:contact@bookncall.me" style="color: #850000; text-decoration: none;">contact@bookncall.me</a>
+            </p>
+            <p style="color: #9ca3af; font-size: 10px; margin: 0;">
+                You're receiving this because you booked a meeting via Book&Call.
             </p>
         </div>
     </div>
@@ -270,9 +279,7 @@ export function generateNewBookingNotificationEmail(data: BookingEmailData): Ema
     <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 32px;">
-            <div style="display: inline-block; background: linear-gradient(135deg, #850000, #6b0000); padding: 16px 24px; border-radius: 16px;">
-                <span style="color: white; font-size: 24px; font-weight: 800;">📅 Book&Call</span>
-            </div>
+            <img src="https://bookncall.me/logo.png" alt="Book&Call" style="height: 48px; width: auto;" />
         </div>
         
         <!-- Main Card -->
@@ -347,9 +354,15 @@ export function generateNewBookingNotificationEmail(data: BookingEmailData): Ema
         </div>
         
         <!-- Footer -->
-        <div style="text-align: center; margin-top: 32px;">
-            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                Powered by <strong style="color: #850000;">Book&Call</strong>
+        <div style="text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px;">
+                Book&Call — Professional Scheduling
+            </p>
+            <p style="color: #9ca3af; font-size: 11px; margin: 0 0 8px;">
+                Questions? Contact us at <a href="mailto:contact@bookncall.me" style="color: #850000; text-decoration: none;">contact@bookncall.me</a>
+            </p>
+            <p style="color: #9ca3af; font-size: 10px; margin: 0;">
+                You're receiving this because someone requested a meeting on your Book&Call page.
             </p>
         </div>
     </div>
@@ -396,9 +409,7 @@ export function generateReminderEmail(data: BookingEmailData): EmailTemplate {
     <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 32px;">
-            <div style="display: inline-block; background: linear-gradient(135deg, #850000, #6b0000); padding: 16px 24px; border-radius: 16px;">
-                <span style="color: white; font-size: 24px; font-weight: 800;">📅 Book&Call</span>
-            </div>
+            <img src="https://bookncall.me/logo.png" alt="Book&Call" style="height: 48px; width: auto;" />
         </div>
         
         <!-- Main Card -->
@@ -434,9 +445,15 @@ export function generateReminderEmail(data: BookingEmailData): EmailTemplate {
         </div>
         
         <!-- Footer -->
-        <div style="text-align: center; margin-top: 32px;">
-            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                Powered by <strong style="color: #850000;">Book&Call</strong>
+        <div style="text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px;">
+                Book&Call — Professional Scheduling
+            </p>
+            <p style="color: #9ca3af; font-size: 11px; margin: 0 0 8px;">
+                Questions? Contact us at <a href="mailto:contact@bookncall.me" style="color: #850000; text-decoration: none;">contact@bookncall.me</a>
+            </p>
+            <p style="color: #9ca3af; font-size: 10px; margin: 0;">
+                You're receiving this because you have an upcoming meeting.
             </p>
         </div>
     </div>
@@ -462,12 +479,53 @@ See you there!
 }
 
 // Email sending function via Appwrite Functions
-export async function sendEmail(to: string, template: EmailTemplate): Promise<boolean> {
-    const FUNCTION_ID = 'send-email'; // Replace with actual ID if different, or use env var
-    // Ideally: process.env.NEXT_PUBLIC_APPWRITE_FUNCTION_SEND_EMAIL
+// Uses FIRE-AND-FORGET pattern - does NOT wait for execution to complete
+export function sendEmail(to: string, template: EmailTemplate): boolean {
+    const FUNCTION_ID = process.env.NEXT_PUBLIC_APPWRITE_SEND_EMAIL_FUNCTION_ID || 'send-email';
+
+    console.log(`[Email Service] Queuing email to: ${to}`);
+
+    const payload = JSON.stringify({
+        to,
+        subject: template.subject,
+        html: template.html,
+        text: template.text
+    });
+
+    // Fire-and-forget: Start the execution but don't await it
+    // This completely avoids the 30-second timeout issue
+    functions.createExecution(
+        FUNCTION_ID,
+        payload,
+        true,  // async - execute in background
+        '/',   // path
+        ExecutionMethod.POST // method
+    ).then((execution) => {
+        // Log result asynchronously (doesn't block main thread)
+        if (execution.status === 'failed') {
+            console.error('[Email Service] Background execution failed:', execution.responseBody || execution.errors);
+        } else {
+            console.log('[Email Service] Email execution started (status:', execution.status, ')');
+        }
+    }).catch((error) => {
+        // Log error asynchronously (doesn't block main thread)  
+        console.error('[Email Service] Background error:', error?.message || error);
+        if (error?.code === 404) {
+            console.warn('[Email Service] Function not found. Deploy it per APPWRITE_SETUP.md');
+        }
+    });
+
+    // Return immediately - email is being sent in background
+    console.log('[Email Service] Email queued for background delivery');
+    return true;
+}
+
+// Async version if you need to wait for the result (not recommended for UI flows)
+export async function sendEmailAsync(to: string, template: EmailTemplate): Promise<boolean> {
+    const FUNCTION_ID = process.env.NEXT_PUBLIC_APPWRITE_SEND_EMAIL_FUNCTION_ID || 'send-email';
 
     try {
-        console.log(`[Email Service] Invoking function '${FUNCTION_ID}' for: ${to}`);
+        console.log(`[Email Service Async] Invoking function for: ${to}`);
 
         const payload = JSON.stringify({
             to,
@@ -479,29 +537,15 @@ export async function sendEmail(to: string, template: EmailTemplate): Promise<bo
         const execution = await functions.createExecution(
             FUNCTION_ID,
             payload,
-            false // async (true) or sync (false)? False to wait for result and check success.
+            true,  // async
+            '/',
+            ExecutionMethod.POST
         );
 
-        if (execution.status === 'completed') {
-            const response = JSON.parse(execution.responseBody);
-            if (response.success) {
-                console.log('[Email Service] Success:', response.data.id);
-                return true;
-            } else {
-                console.error('[Email Service] Function returned error:', response.error);
-                return false;
-            }
-        } else {
-            console.error('[Email Service] Execution failed:', execution.status);
-            return false;
-        }
-    } catch (error) {
-        console.error('[Email Service] Error invoking function:', error);
-        // Fallback for dev/demo if function not set up: log only
-        if ((error as any).code === 404) {
-            console.warn('[Email Service] Function might not be deployed. Check APPWRITE_SETUP.md');
-        }
+        console.log('[Email Service Async] Execution status:', execution.status);
+        return execution.status !== 'failed';
+    } catch (error: any) {
+        console.error('[Email Service Async] Error:', error?.message || error);
         return false;
     }
 }
-

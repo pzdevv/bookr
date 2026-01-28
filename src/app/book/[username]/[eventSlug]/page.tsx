@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { eventTypeService, availabilityService, bookingService, userService, generateCallRoomId, EventType, Availability, User } from '@/lib/appwrite/database';
+import { eventTypeService, availabilityService, bookingService, userService, generateCallRoomId, EventType, Availability, User, Booking } from '@/lib/appwrite/database';
 import { formatTime, getTimeSlots, getUserTimezone } from '@/lib/utils';
 import { sanitizeName, sanitizeEmail, sanitizeMultiline } from '@/lib/utils/sanitize';
 import { Logo } from '@/components/ui/logo';
 import confetti from 'canvas-confetti';
+import { sendEmail, generateNewBookingNotificationEmail } from '@/lib/services/email';
 
 export default function BookEventPage({ params }: { params: Promise<{ username: string; eventSlug: string }> }) {
     const { username, eventSlug } = use(params);
@@ -17,6 +18,7 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
     const [user, setUser] = useState<User | null>(null);
     const [eventType, setEventType] = useState<EventType | null>(null);
     const [availability, setAvailability] = useState<Availability[]>([]);
+    const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -41,8 +43,13 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                     if (!foundEvent && activeEvents.length > 0) foundEvent = activeEvents[0];
                     if (foundEvent) {
                         setEventType(foundEvent);
-                        const avail = await availabilityService.listByUser(foundUser.$id);
+                        const [avail, bookings] = await Promise.all([
+                            availabilityService.listByUser(foundUser.$id),
+                            bookingService.listByUser(foundUser.$id)
+                        ]);
                         setAvailability(avail.filter((a) => a.isEnabled));
+                        // Only keep confirmed/pending bookings for slot blocking
+                        setExistingBookings(bookings.filter(b => b.status === 'confirmed' || b.status === 'pending'));
                     }
                 }
             } catch (err) { console.error('Error:', err); }
@@ -56,14 +63,43 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
             const dayOfWeek = selectedDate.getDay();
             const dayAvail = availability.find((a) => a.day === dayOfWeek);
             if (dayAvail) {
-                const slots = getTimeSlots(dayAvail.startTime, dayAvail.endTime, eventType.duration, eventType.buffer);
+                let slots = getTimeSlots(dayAvail.startTime, dayAvail.endTime, eventType.duration, eventType.buffer);
+
+                // Filter out past times if selected date is today
+                const now = new Date();
+                const isToday = selectedDate.toDateString() === now.toDateString();
+                if (isToday) {
+                    slots = slots.filter(slot => {
+                        const [hours, mins] = slot.split(':').map(Number);
+                        const slotTime = new Date(selectedDate);
+                        slotTime.setHours(hours, mins, 0, 0);
+                        return slotTime > now;
+                    });
+                }
+
+                // Filter out already-booked slots
+                slots = slots.filter(slot => {
+                    const [hours, mins] = slot.split(':').map(Number);
+                    const slotStart = new Date(selectedDate);
+                    slotStart.setHours(hours, mins, 0, 0);
+                    const slotEnd = new Date(slotStart.getTime() + eventType.duration * 60000);
+
+                    // Check if this slot overlaps with any existing booking
+                    return !existingBookings.some(booking => {
+                        const bookingStart = new Date(booking.slotTime);
+                        const bookingEnd = new Date(bookingStart.getTime() + eventType.duration * 60000);
+                        // Overlap: slot starts before booking ends AND slot ends after booking starts
+                        return slotStart < bookingEnd && slotEnd > bookingStart;
+                    });
+                });
+
                 setAvailableSlots(slots);
             } else {
                 setAvailableSlots([]);
             }
             setSelectedTime(null);
         }
-    }, [selectedDate, eventType, availability]);
+    }, [selectedDate, eventType, availability, existingBookings]);
 
     const days = useMemo(() => {
         const year = currentMonth.getFullYear();
@@ -126,6 +162,19 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                 notes: cleanNotes,
                 callRoomId,
             });
+
+            // Notify host about new booking request (async, don't block)
+            const hostNotification = generateNewBookingNotificationEmail({
+                guestName: cleanName,
+                guestEmail: cleanEmail,
+                hostName: user.name || 'Host',
+                hostEmail: user.email,
+                eventTitle: eventType.title,
+                slotTime: slotDateTime.toISOString(),
+                duration: eventType.duration,
+                notes: cleanNotes
+            });
+            sendEmail(user.email, hostNotification);
 
             // Trigger confetti celebration
             confetti({

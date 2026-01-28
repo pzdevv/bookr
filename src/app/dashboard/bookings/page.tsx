@@ -68,10 +68,8 @@ export default function BookingsPage() {
                 notes: booking.notes
             });
 
-            // Fire and forget - don't await email sending
-            sendEmail(booking.guestEmail, email).catch(err =>
-                console.error('Email send failed:', err)
-            );
+            // Fire and forget - errors handled internally
+            sendEmail(booking.guestEmail, email);
         } catch (error) {
             console.error('Error confirming:', error);
             setBookings(prev => prev.map(b => b.$id === booking.$id ? { ...b, status: 'pending' as const } : b));
@@ -104,10 +102,8 @@ export default function BookingsPage() {
                 slotTime: booking.slotTime,
                 duration: 30,
             });
-            // Fire and forget - don't await email sending
-            sendEmail(booking.guestEmail, email).catch(err =>
-                console.error('Email send failed:', err)
-            );
+            // Fire and forget - errors handled internally
+            sendEmail(booking.guestEmail, email);
         } catch (error) {
             console.error('Error declining:', error);
             setBookings(prev => prev.map(b => b.$id === booking.$id ? { ...b, status: 'pending' as const } : b));

@@ -474,6 +474,14 @@ export function isCallExpired(booking: Booking): boolean {
     return new Date(booking.callExpiry) < new Date();
 }
 
+// Check if call is too early to join (more than 15 min before scheduled time)
+export function isCallTooEarly(booking: Booking): boolean {
+    const slotTime = new Date(booking.slotTime).getTime();
+    const now = Date.now();
+    const diffMinutes = (slotTime - now) / 60000;
+    return diffMinutes > 15;
+}
+
 // ============================================
 // CALL NOTES SERVICE
 // ============================================
