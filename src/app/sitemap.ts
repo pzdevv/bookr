@@ -1,7 +1,22 @@
 import { MetadataRoute } from 'next'
+import { userService } from '@/lib/appwrite/database';
 
-export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = 'https://bookncall.me'
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bookncall.me';
+
+    // Fetch all users for dynamic routes
+    let userRoutes: MetadataRoute.Sitemap = [];
+    try {
+        const users = await userService.list();
+        userRoutes = users.map(user => ({
+            url: `${baseUrl}/book/${user.username || user.$id}`,
+            lastModified: new Date(user.$updatedAt || new Date()),
+            changeFrequency: 'weekly' as const,
+            priority: 0.7,
+        }));
+    } catch (error) {
+        console.error('Failed to generate user sitemap routes:', error);
+    }
 
     return [
         // Core pages
@@ -37,11 +52,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: 'yearly',
             priority: 0.3,
         },
-        {
-            url: `${baseUrl}/contact`,
-            lastModified: new Date(),
-            changeFrequency: 'yearly',
-            priority: 0.5,
-        },
+
+        // Dynamic User Routes
+        ...userRoutes,
     ]
 }
