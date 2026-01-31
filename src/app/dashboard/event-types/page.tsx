@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '@/components/dashboard/layout';
+import { EventTypesPageSkeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -184,9 +185,7 @@ export default function EventTypesPage() {
             {/* Content */}
             <div className="p-8">
                 {isLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="w-8 h-8 border-3 border-[#850000]/20 border-t-[#850000] rounded-full animate-spin" />
-                    </div>
+                    <EventTypesPageSkeleton />
                 ) : eventTypes.length === 0 ? (
                     <div className="text-center py-20">
                         <div className="w-20 h-20 bg-[#850000]/10 rounded-xl flex items-center justify-center mx-auto mb-4">

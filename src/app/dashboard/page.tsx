@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/dashboard/layout';
+import { DashboardPageSkeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { bookingService, eventTypeService, Booking, EventType } from '@/lib/appwrite/database';
 import { generateBookingConfirmationEmail, generateBookingRejectedEmail, sendEmail } from '@/lib/services/email';
@@ -229,14 +230,7 @@ export default function DashboardPage() {
     if (isLoading || authLoading) {
         return (
             <DashboardLayout>
-                <div className="min-h-screen flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-14 h-14 rounded-lg bg-[#850000] flex items-center justify-center animate-pulse shadow-lg">
-                            <span className="material-symbols-outlined text-white text-3xl">calendar_today</span>
-                        </div>
-                        <p className="text-gray-500 text-sm font-medium">Loading your dashboard...</p>
-                    </div>
-                </div>
+                <DashboardPageSkeleton />
             </DashboardLayout>
         );
     }

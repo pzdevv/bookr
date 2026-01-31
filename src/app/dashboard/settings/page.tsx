@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/layout';
+import { SettingsPageSkeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { userService } from '@/lib/appwrite/database';
 import { sanitizeName, sanitizeSlug, sanitizeMultiline } from '@/lib/utils/sanitize';
+import { AvatarCropper } from '@/components/ui/avatar-cropper';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -21,6 +23,8 @@ export default function SettingsPage() {
     const [avatarUrl, setAvatarUrl] = useState('');
     const [saveMessage, setSaveMessage] = useState('');
     const [usernameError, setUsernameError] = useState('');
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [showCropper, setShowCropper] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [notifications, setNotifications] = useState({
@@ -87,14 +91,32 @@ export default function SettingsPage() {
             setSaveMessage('Please select an image file');
             return;
         }
-        if (file.size > 1024 * 1024) { // 1MB limit
-            setSaveMessage('Image must be under 1MB');
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit for cropping
+            setSaveMessage('Image must be under 5MB');
             return;
         }
 
+        // Show cropper
+        setPendingFile(file);
+        setShowCropper(true);
+
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleCroppedAvatar = async (croppedBlob: Blob) => {
+        if (!userProfile) return;
+
+        setShowCropper(false);
+        setPendingFile(null);
         setIsUploading(true);
+
         try {
-            const url = await userService.uploadAvatar(file);
+            // Convert Blob to File
+            const croppedFile = new File([croppedBlob], 'avatar.jpg', { type: 'image/jpeg' });
+            const url = await userService.uploadAvatar(croppedFile);
             await userService.update(userProfile.$id, { avatar: url });
             setAvatarUrl(url);
             await refreshUser();
@@ -112,6 +134,11 @@ export default function SettingsPage() {
             setIsUploading(false);
             setTimeout(() => setSaveMessage(''), 3000);
         }
+    };
+
+    const handleCropperCancel = () => {
+        setShowCropper(false);
+        setPendingFile(null);
     };
 
     const handleSave = async () => {
@@ -168,6 +195,14 @@ export default function SettingsPage() {
             setTimeout(() => setSaveMessage(''), 3000);
         }
     };
+
+    if (!userProfile) {
+        return (
+            <DashboardLayout>
+                <SettingsPageSkeleton />
+            </DashboardLayout>
+        );
+    }
 
     return (
         <DashboardLayout>
@@ -369,6 +404,15 @@ export default function SettingsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Avatar Cropper Modal */}
+            {showCropper && pendingFile && (
+                <AvatarCropper
+                    file={pendingFile}
+                    onCrop={handleCroppedAvatar}
+                    onCancel={handleCropperCancel}
+                />
+            )}
         </DashboardLayout>
     );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/dashboard/layout';
+import { AvailabilityPageSkeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { availabilityService, Availability } from '@/lib/appwrite/database';
 import { getDayName } from '@/lib/utils';
@@ -206,14 +207,7 @@ export default function AvailabilityPage() {
             </header>
 
             {isLoading ? (
-                <div className="flex items-center justify-center py-20">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-[#850000] flex items-center justify-center animate-pulse shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                            <span className="material-symbols-outlined text-white text-2xl">schedule</span>
-                        </div>
-                        <p className="text-[#6b4444] text-sm">Loading availability...</p>
-                    </div>
-                </div>
+                <AvailabilityPageSkeleton />
             ) : (
                 <div ref={containerRef} className="p-6 lg:p-8 max-w-4xl space-y-5" style={{ perspective: '1000px' }}>
                     {/* Timezone Card */}
@@ -296,7 +290,7 @@ export default function AvailabilityPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="quick-card bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)] border border-[#850000]/5">
                             <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">
+                                <div className="w-10 h-10 rounded-lg bg-[#850000] flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">
                                     <span className="material-symbols-outlined text-white text-xl">event_note</span>
                                 </div>
                                 <div>
@@ -311,7 +305,7 @@ export default function AvailabilityPage() {
 
                         <div className="quick-card bg-white rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)] border border-[#850000]/5">
                             <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-lg bg-green-600 flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">
+                                <div className="w-10 h-10 rounded-lg bg-[#6b0000] flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">
                                     <span className="material-symbols-outlined text-white text-xl">timer</span>
                                 </div>
                                 <div>

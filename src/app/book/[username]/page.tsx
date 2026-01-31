@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { use } from 'react';
 import { userService, eventTypeService, User, EventType } from '@/lib/appwrite/database';
 import { Logo } from '@/components/ui/logo';
+import { UserBookingPageSkeleton } from '@/components/ui/skeleton';
 
 export default function UserBookingPage({ params }: { params: Promise<{ username: string }> }) {
     const { username } = use(params);
@@ -31,16 +32,7 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
     }, [username]);
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-[#850000] flex items-center justify-center animate-pulse shadow-2xl shadow-[#850000]/30">
-                        <span className="material-symbols-outlined text-white text-3xl">calendar_today</span>
-                    </div>
-                    <p className="text-[#6b4444] font-medium">Loading profile...</p>
-                </div>
-            </div>
-        );
+        return <UserBookingPageSkeleton />;
     }
 
     if (!user) {

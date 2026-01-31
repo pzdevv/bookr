@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/dashboard/layout';
+import { BookingsPageSkeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { bookingService, eventTypeService, Booking } from '@/lib/appwrite/database';
 import { generateBookingConfirmationEmail, generateBookingRejectedEmail, sendEmail } from '@/lib/services/email';
@@ -151,14 +152,7 @@ export default function BookingsPage() {
     if (isLoading || authLoading) {
         return (
             <DashboardLayout>
-                <div className="min-h-screen flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-14 h-14 rounded-xl bg-[#850000] flex items-center justify-center animate-pulse shadow-lg">
-                            <span className="material-symbols-outlined text-white text-3xl">calendar_month</span>
-                        </div>
-                        <p className="text-gray-500 text-sm font-medium">Loading bookings...</p>
-                    </div>
-                </div>
+                <BookingsPageSkeleton />
             </DashboardLayout>
         );
     }

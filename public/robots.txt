@@ -2,10 +2,15 @@
 User-agent: *
 Allow: /
 
-# Disallow admin and auth pages from indexing
+# Disallow private pages from indexing
+Disallow: /dashboard/
 Disallow: /admin/
-Disallow: /auth/
 Disallow: /api/
+Disallow: /call/
+
+# Allow auth pages for discoverability
+Allow: /auth/login
+Allow: /auth/register
 
 # Sitemap
-Sitemap: https://bookr.app/sitemap.xml
+Sitemap: https://bookncall.me/sitemap.xml

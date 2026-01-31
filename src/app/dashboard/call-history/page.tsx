@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DashboardLayout } from '@/components/dashboard/layout';
+import { CallHistoryPageSkeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/hooks/use-auth';
 import { bookingService, callNotesService, callDocumentsService, Booking, CallNotes, CallDocument } from '@/lib/appwrite/database';
 import { formatCallDuration } from '@/lib/hooks/use-audio-call';
@@ -124,119 +125,131 @@ export default function CallHistoryPage() {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
         } else {
             setSortBy(key);
-            setSortOrder('desc'); // Default to desc for both initially
+            setSortOrder('desc');
         }
     };
 
     if (isLoading) {
         return (
             <DashboardLayout>
-                <div className="min-h-[60vh] flex items-center justify-center bg-[#fcf8f8]">
-                    <div className="text-center">
-                        <div className="w-12 h-12 border-3 border-[#850000] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                        <p className="text-[#6b4444]">Loading call history...</p>
-                    </div>
-                </div>
+                <CallHistoryPageSkeleton />
             </DashboardLayout>
         );
     }
 
     return (
         <DashboardLayout>
-            <div className="p-6 max-w-4xl mx-auto bg-[#fcf8f8] min-h-screen text-[#1d0c0c]">
+            <div className="p-4 md:p-6 lg:p-8 max-w-5xl mx-auto min-h-screen">
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-2xl font-bold text-[#1d0c0c] mb-2">Call History</h1>
-                    <p className="text-[#6b4444]">Review your past calls, notes, and shared documents</p>
-                </div>
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8"
+                >
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center shadow-lg shadow-[#850000]/20">
+                            <span className="material-symbols-outlined text-white text-2xl">history</span>
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold text-[#1d0c0c]">Call History</h1>
+                            <p className="text-[#6b4444] text-sm md:text-base">Review past calls, notes & shared documents</p>
+                        </div>
+                    </div>
+                </motion.div>
 
                 {/* Controls */}
-                <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-start md:items-center">
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-start md:items-center"
+                >
                     {/* Filters */}
-                    <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
-                        <button
-                            onClick={() => setFilter('all')}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'all'
-                                ? 'bg-[#850000] text-white shadow-lg'
-                                : 'bg-white text-[#6b4444] border border-[#850000]/10 hover:border-[#850000]/30'
-                                }`}
-                        >
-                            All Calls ({callRecords.length})
-                        </button>
-                        <button
-                            onClick={() => setFilter('with_notes')}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'with_notes'
-                                ? 'bg-[#850000] text-white shadow-lg'
-                                : 'bg-white text-[#6b4444] border border-[#850000]/10 hover:border-[#850000]/30'
-                                }`}
-                        >
-                            <span className="flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-base">notes</span>
-                                With Notes
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => setFilter('with_docs')}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${filter === 'with_docs'
-                                ? 'bg-[#850000] text-white shadow-lg'
-                                : 'bg-white text-[#6b4444] border border-[#850000]/10 hover:border-[#850000]/30'
-                                }`}
-                        >
-                            <span className="flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-base">folder</span>
-                                With Documents
-                            </span>
-                        </button>
+                    <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto">
+                        {[
+                            { key: 'all' as const, label: `All Calls`, count: callRecords.length, icon: 'call' },
+                            { key: 'with_notes' as const, label: 'With Notes', icon: 'notes' },
+                            { key: 'with_docs' as const, label: 'With Docs', icon: 'folder' },
+                        ].map((f) => (
+                            <button
+                                key={f.key}
+                                onClick={() => setFilter(f.key)}
+                                className={`group px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer ${filter === f.key
+                                    ? 'bg-gradient-to-r from-[#850000] to-[#6b0000] text-white shadow-lg shadow-[#850000]/25'
+                                    : 'bg-white text-[#6b4444] hover:bg-[#850000]/5 hover:text-[#850000]'
+                                    }`}
+                            >
+                                <span className={`material-symbols-outlined text-lg transition-transform duration-200 ${filter === f.key ? '' : 'group-hover:scale-110'}`}>
+                                    {f.icon}
+                                </span>
+                                {f.label}
+                                {f.count !== undefined && (
+                                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${filter === f.key ? 'bg-white/20' : 'bg-[#850000]/10 text-[#850000]'
+                                        }`}>
+                                        {f.count}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Sorting */}
                     <div className="flex gap-2">
-                        <button
-                            onClick={() => toggleSort('date')}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1 ${sortBy === 'date'
-                                ? 'bg-[#850000]/10 text-[#850000] border border-[#850000]/20'
-                                : 'bg-white text-[#6b4444] border border-[#850000]/10'
-                                }`}
-                        >
-                            Date
-                            {sortBy === 'date' && (
-                                <span className="material-symbols-outlined text-sm">
-                                    {sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => toggleSort('name')}
-                            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1 ${sortBy === 'name'
-                                ? 'bg-[#850000]/10 text-[#850000] border border-[#850000]/20'
-                                : 'bg-white text-[#6b4444] border border-[#850000]/10'
-                                }`}
-                        >
-                            Name
-                            {sortBy === 'name' && (
-                                <span className="material-symbols-outlined text-sm">
-                                    {sortOrder === 'asc' ? 'arrow_downward' : 'arrow_upward'}
-                                </span>
-                            )}
-                        </button>
+                        {[
+                            { key: 'date' as const, label: 'Date' },
+                            { key: 'name' as const, label: 'Name' },
+                        ].map((s) => (
+                            <button
+                                key={s.key}
+                                onClick={() => toggleSort(s.key)}
+                                className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${sortBy === s.key
+                                    ? 'bg-[#850000]/10 text-[#850000]'
+                                    : 'bg-white text-[#6b4444] hover:bg-gray-50'
+                                    }`}
+                            >
+                                {s.label}
+                                {sortBy === s.key && (
+                                    <motion.span
+                                        initial={{ rotate: 0 }}
+                                        animate={{ rotate: sortOrder === 'asc' ? 180 : 0 }}
+                                        className="material-symbols-outlined text-sm"
+                                    >
+                                        arrow_downward
+                                    </motion.span>
+                                )}
+                            </button>
+                        ))}
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Empty State */}
                 {processedRecords.length === 0 ? (
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-2xl border border-[#850000]/10 p-12 text-center shadow-sm"
+                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        className="bg-white rounded-3xl p-12 md:p-16 text-center shadow-xl shadow-black/5"
                     >
-                        <div className="w-20 h-20 bg-[#850000]/5 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                            <span className="material-symbols-outlined text-[#850000] text-4xl">history</span>
-                        </div>
-                        <h3 className="text-xl font-bold text-[#1d0c0c] mb-2">No calls yet</h3>
-                        <p className="text-[#6b4444] mb-6">Your completed calls will appear here with notes and documents.</p>
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: 'spring', delay: 0.2 }}
+                            className="w-24 h-24 bg-gradient-to-br from-[#850000]/10 to-[#850000]/5 rounded-3xl flex items-center justify-center mx-auto mb-6"
+                        >
+                            <motion.span
+                                animate={{ rotate: [0, -10, 10, 0] }}
+                                transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+                                className="material-symbols-outlined text-[#850000] text-5xl"
+                            >
+                                history
+                            </motion.span>
+                        </motion.div>
+                        <h3 className="text-2xl font-bold text-[#1d0c0c] mb-3">No calls yet</h3>
+                        <p className="text-[#6b4444] mb-8 max-w-sm mx-auto">
+                            Your completed calls will appear here with notes and documents.
+                        </p>
                         <Link
                             href="/dashboard"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-[#850000] text-white font-bold rounded-xl hover:bg-[#6b0000] transition-colors"
+                            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white font-bold rounded-xl hover:shadow-xl hover:shadow-[#850000]/25 transition-all duration-300 hover:-translate-y-0.5"
                         >
                             <span className="material-symbols-outlined">arrow_back</span>
                             Back to Dashboard
@@ -254,54 +267,80 @@ export default function CallHistoryPage() {
                                     key={record.booking.$id}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.03 }}
-                                    className="bg-white rounded-2xl border border-[#850000]/10 overflow-hidden hover:shadow-lg transition-all"
+                                    transition={{ delay: index * 0.05 }}
+                                    className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all duration-300"
                                 >
                                     {/* Header Row - Always Visible */}
                                     <button
                                         onClick={() => setExpandedId(isExpanded ? null : record.booking.$id)}
-                                        className="w-full p-5 flex items-center gap-4 text-left hover:bg-[#850000]/[0.02] transition-colors"
+                                        className="w-full p-5 md:p-6 flex items-center gap-4 text-left hover:bg-[#850000]/[0.02] transition-colors cursor-pointer"
                                     >
                                         {/* Avatar */}
-                                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center flex-shrink-0">
-                                            <span className="text-white font-bold text-xl">{record.booking.guestName.charAt(0)}</span>
+                                        <div className="relative">
+                                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#850000]/20">
+                                                <span className="text-white font-bold text-xl">{record.booking.guestName.charAt(0)}</span>
+                                            </div>
+                                            {duration > 0 && (
+                                                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                                                    <span className="material-symbols-outlined text-white text-xs">check</span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Info */}
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-[#1d0c0c] truncate">{record.booking.guestName}</h3>
+                                            <h3 className="font-bold text-[#1d0c0c] truncate text-lg">{record.booking.guestName}</h3>
                                             <p className="text-sm text-[#6b4444] truncate">{record.booking.guestEmail}</p>
                                         </div>
 
                                         {/* Meta */}
                                         <div className="text-right flex-shrink-0 hidden sm:block">
-                                            <p className="text-sm font-medium text-[#1d0c0c]">{formatDate(record.booking.slotTime)}</p>
-                                            <p className="text-xs text-[#6b4444]">{formatCallDuration(duration)}</p>
+                                            <p className="text-sm font-semibold text-[#1d0c0c]">{formatDate(record.booking.slotTime)}</p>
+                                            <p className="text-xs text-[#6b4444] flex items-center gap-1 justify-end">
+                                                <span className="material-symbols-outlined text-sm">timer</span>
+                                                {formatCallDuration(duration)}
+                                            </p>
                                         </div>
 
                                         {/* Badges */}
-                                        <div className="flex gap-1.5 flex-shrink-0">
+                                        <div className="flex gap-2 flex-shrink-0">
                                             {record.notes?.summary && (
-                                                <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center" title="Has notes">
+                                                <motion.span
+                                                    whileHover={{ scale: 1.1 }}
+                                                    className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center"
+                                                    title="Has notes"
+                                                >
                                                     <span className="material-symbols-outlined text-blue-600 text-lg">notes</span>
-                                                </span>
+                                                </motion.span>
                                             )}
                                             {record.documents.length > 0 && (
-                                                <span className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center" title={`${record.documents.length} documents`}>
+                                                <motion.span
+                                                    whileHover={{ scale: 1.1 }}
+                                                    className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center"
+                                                    title={`${record.documents.length} documents`}
+                                                >
                                                     <span className="material-symbols-outlined text-green-600 text-lg">folder</span>
-                                                </span>
+                                                </motion.span>
                                             )}
                                             {actionItems.length > 0 && (
-                                                <span className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center" title={`${actionItems.length} action items`}>
+                                                <motion.span
+                                                    whileHover={{ scale: 1.1 }}
+                                                    className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center"
+                                                    title={`${actionItems.length} action items`}
+                                                >
                                                     <span className="material-symbols-outlined text-orange-600 text-lg">checklist</span>
-                                                </span>
+                                                </motion.span>
                                             )}
                                         </div>
 
                                         {/* Expand Arrow */}
-                                        <span className={`material-symbols-outlined text-[#6b4444] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                                        <motion.span
+                                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                            className="material-symbols-outlined text-[#6b4444]"
+                                        >
                                             expand_more
-                                        </span>
+                                        </motion.span>
                                     </button>
 
                                     {/* Expanded Content */}
@@ -311,12 +350,13 @@ export default function CallHistoryPage() {
                                                 initial={{ height: 0, opacity: 0 }}
                                                 animate={{ height: 'auto', opacity: 1 }}
                                                 exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.2 }}
+                                                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                                                 className="overflow-hidden"
                                             >
-                                                <div className="px-5 pb-5 pt-2 border-t border-[#850000]/5">
+                                                <div className="px-5 md:px-6 pb-6 pt-2 border-t border-[#850000]/5">
                                                     {/* Mobile Date */}
-                                                    <div className="sm:hidden mb-4 text-sm text-[#6b4444]">
+                                                    <div className="sm:hidden mb-4 text-sm text-[#6b4444] flex items-center gap-2">
+                                                        <span className="material-symbols-outlined text-lg">calendar_today</span>
                                                         {formatDate(record.booking.slotTime)} • {formatCallDuration(duration)}
                                                     </div>
 
@@ -324,57 +364,89 @@ export default function CallHistoryPage() {
                                                         {/* Notes Section */}
                                                         <div className="space-y-4">
                                                             <h4 className="font-bold text-[#1d0c0c] flex items-center gap-2">
-                                                                <span className="material-symbols-outlined text-[#850000]">edit_note</span>
+                                                                <span className="w-8 h-8 rounded-lg bg-[#850000]/10 flex items-center justify-center">
+                                                                    <span className="material-symbols-outlined text-[#850000] text-lg">edit_note</span>
+                                                                </span>
                                                                 Notes
                                                             </h4>
 
                                                             {record.notes?.summary ? (
-                                                                <div className="bg-[#fcf8f8] rounded-xl p-4">
-                                                                    <p className="text-xs font-bold text-[#850000] uppercase tracking-wide mb-1">Summary</p>
-                                                                    <p className="text-sm text-[#1d0c0c] whitespace-pre-wrap">{record.notes.summary}</p>
-                                                                </div>
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, x: -10 }}
+                                                                    animate={{ opacity: 1, x: 0 }}
+                                                                    className="bg-gradient-to-br from-[#fcf8f8] to-white rounded-xl p-4 border border-[#850000]/5"
+                                                                >
+                                                                    <p className="text-xs font-bold text-[#850000] uppercase tracking-wider mb-2">Summary</p>
+                                                                    <p className="text-sm text-[#1d0c0c] whitespace-pre-wrap leading-relaxed">{record.notes.summary}</p>
+                                                                </motion.div>
                                                             ) : (
-                                                                <p className="text-sm text-[#6b4444] italic">No summary recorded</p>
+                                                                <p className="text-sm text-[#6b4444] italic py-4">No summary recorded</p>
                                                             )}
 
                                                             {record.notes?.decisions && (
-                                                                <div className="bg-[#fcf8f8] rounded-xl p-4">
-                                                                    <p className="text-xs font-bold text-[#850000] uppercase tracking-wide mb-1">Decisions</p>
-                                                                    <p className="text-sm text-[#1d0c0c] whitespace-pre-wrap">{record.notes.decisions}</p>
-                                                                </div>
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, x: -10 }}
+                                                                    animate={{ opacity: 1, x: 0 }}
+                                                                    transition={{ delay: 0.1 }}
+                                                                    className="bg-gradient-to-br from-[#fcf8f8] to-white rounded-xl p-4 border border-[#850000]/5"
+                                                                >
+                                                                    <p className="text-xs font-bold text-[#850000] uppercase tracking-wider mb-2">Decisions</p>
+                                                                    <p className="text-sm text-[#1d0c0c] whitespace-pre-wrap leading-relaxed">{record.notes.decisions}</p>
+                                                                </motion.div>
                                                             )}
 
                                                             {actionItems.length > 0 && (
-                                                                <div className="bg-[#fcf8f8] rounded-xl p-4">
-                                                                    <p className="text-xs font-bold text-[#850000] uppercase tracking-wide mb-2">Action Items</p>
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, x: -10 }}
+                                                                    animate={{ opacity: 1, x: 0 }}
+                                                                    transition={{ delay: 0.2 }}
+                                                                    className="bg-gradient-to-br from-[#fcf8f8] to-white rounded-xl p-4 border border-[#850000]/5"
+                                                                >
+                                                                    <p className="text-xs font-bold text-[#850000] uppercase tracking-wider mb-3">Action Items</p>
                                                                     <ul className="space-y-2">
                                                                         {actionItems.map((item, i) => (
-                                                                            <li key={i} className="flex items-start gap-2 text-sm">
-                                                                                <span className={`material-symbols-outlined text-base mt-0.5 ${item.completed ? 'text-green-600' : 'text-[#6b4444]'}`}>
+                                                                            <motion.li
+                                                                                key={i}
+                                                                                initial={{ opacity: 0, x: -5 }}
+                                                                                animate={{ opacity: 1, x: 0 }}
+                                                                                transition={{ delay: 0.1 * i }}
+                                                                                className="flex items-start gap-3 text-sm"
+                                                                            >
+                                                                                <span className={`material-symbols-outlined text-lg mt-0.5 ${item.completed ? 'text-green-600' : 'text-[#6b4444]'}`}>
                                                                                     {item.completed ? 'check_circle' : 'radio_button_unchecked'}
                                                                                 </span>
                                                                                 <span className={item.completed ? 'line-through text-[#6b4444]' : 'text-[#1d0c0c]'}>
                                                                                     {item.text}
                                                                                 </span>
-                                                                            </li>
+                                                                            </motion.li>
                                                                         ))}
                                                                     </ul>
-                                                                </div>
+                                                                </motion.div>
                                                             )}
                                                         </div>
 
                                                         {/* Documents Section */}
                                                         <div>
                                                             <h4 className="font-bold text-[#1d0c0c] flex items-center gap-2 mb-4">
-                                                                <span className="material-symbols-outlined text-[#850000]">folder</span>
+                                                                <span className="w-8 h-8 rounded-lg bg-[#850000]/10 flex items-center justify-center">
+                                                                    <span className="material-symbols-outlined text-[#850000] text-lg">folder</span>
+                                                                </span>
                                                                 Documents
                                                             </h4>
 
                                                             {record.documents.length > 0 ? (
                                                                 <div className="space-y-2">
-                                                                    {record.documents.map((doc) => (
-                                                                        <div key={doc.$id} className="flex items-center gap-3 p-3 bg-[#fcf8f8] rounded-xl group">
-                                                                            <span className="material-symbols-outlined text-[#850000]">{getFileIcon(doc.fileType)}</span>
+                                                                    {record.documents.map((doc, i) => (
+                                                                        <motion.div
+                                                                            key={doc.$id}
+                                                                            initial={{ opacity: 0, y: 10 }}
+                                                                            animate={{ opacity: 1, y: 0 }}
+                                                                            transition={{ delay: 0.1 * i }}
+                                                                            className="flex items-center gap-3 p-4 bg-gradient-to-br from-[#fcf8f8] to-white rounded-xl group hover:shadow-md transition-all duration-200 border border-[#850000]/5"
+                                                                        >
+                                                                            <div className="w-10 h-10 rounded-lg bg-[#850000]/10 flex items-center justify-center">
+                                                                                <span className="material-symbols-outlined text-[#850000]">{getFileIcon(doc.fileType)}</span>
+                                                                            </div>
                                                                             <div className="flex-1 min-w-0">
                                                                                 <p className="text-sm font-medium text-[#1d0c0c] truncate">{doc.fileName}</p>
                                                                                 <p className="text-xs text-[#6b4444]">
@@ -384,17 +456,17 @@ export default function CallHistoryPage() {
                                                                             {callDocumentsService.isConfigured() && (
                                                                                 <a
                                                                                     href={callDocumentsService.getFileDownloadUrl(doc.fileId)}
-                                                                                    className="w-9 h-9 rounded-lg bg-white flex items-center justify-center hover:bg-[#850000] hover:text-white text-[#6b4444] transition-colors"
+                                                                                    className="w-10 h-10 rounded-xl bg-white flex items-center justify-center hover:bg-[#850000] hover:text-white text-[#6b4444] transition-all duration-200 shadow-sm group-hover:shadow-md"
                                                                                     title="Download"
                                                                                 >
                                                                                     <span className="material-symbols-outlined text-lg">download</span>
                                                                                 </a>
                                                                             )}
-                                                                        </div>
+                                                                        </motion.div>
                                                                     ))}
                                                                 </div>
                                                             ) : (
-                                                                <p className="text-sm text-[#6b4444] italic">No documents shared</p>
+                                                                <p className="text-sm text-[#6b4444] italic py-4">No documents shared</p>
                                                             )}
                                                         </div>
                                                     </div>
