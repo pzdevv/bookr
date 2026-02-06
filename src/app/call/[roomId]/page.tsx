@@ -762,7 +762,8 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                         animate={{ x: 0 }}
                                         exit={{ x: '100%' }}
                                         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                                        className="absolute inset-y-0 right-0 w-full md:w-[400px] border-l border-[#850000]/10 bg-white z-[60] shadow-2xl flex flex-col">
+                                        className="fixed inset-y-0 right-0 w-full md:w-[400px] border-l border-[#850000]/10 bg-white z-[100] shadow-2xl flex flex-col"
+                                    >
 
                                         {/* Header */}
                                         <div className="p-5 border-b border-[#850000]/10 flex items-center justify-between">

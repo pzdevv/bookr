@@ -29,7 +29,8 @@ import {
   Check,
   Mail,
   Send,
-  Loader2
+  Loader2,
+  Palette
 } from "lucide-react";
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Logo } from '@/components/ui/logo';
@@ -147,6 +148,13 @@ const featuresData = [
     title: "Smart Buffer Management",
     description:
       "Adaptive buffers between meetings to prevent burnout and back-to-back exhaustion.",
+  },
+  {
+    id: 6,
+    icon: Palette,
+    title: "Brand Customization",
+    description:
+      "Make it yours. Customize colors, fonts, and layouts to match your brand identity perfectly.",
   },
 ];
 
@@ -991,7 +999,6 @@ export default function HomePage() {
 
   // Refs for Old Hero Animations
   const heroRef = useRef<HTMLElement>(null);
-  const badgeRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const subtextRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
@@ -1059,12 +1066,6 @@ export default function HomePage() {
       // Hero entrance animations
       const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-      if (badgeRef.current) {
-        heroTl.fromTo(badgeRef.current,
-          { opacity: 0, y: 30, scale: 0.8 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.8 }
-        );
-      }
       if (headingRef.current) {
         heroTl.fromTo(headingRef.current,
           { opacity: 0, y: 60, scale: 0.95 },
@@ -1185,22 +1186,15 @@ export default function HomePage() {
         )}
 
         {/* 2. Original Hero Section */}
-        <section ref={heroRef} className="relative pt-44 pb-0 bg-base overflow-x-clip">
+        <section ref={heroRef} className="relative pt-32 lg:pt-44 pb-0 bg-base overflow-x-clip">
           <div className="container-xl px-4 text-center">
-            <div ref={badgeRef} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#850000]/5 text-[#850000] text-xs font-bold uppercase tracking-widest mb-8" style={{ border: '1px solid rgba(133, 0, 0, 0.1)' }}>
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#850000] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#850000]"></span>
-              </span>
-              Now with real-time chats
-            </div>
-            <h1 ref={headingRef} className="heading-xl mb-8 max-w-4xl mx-auto">
+            <h1 ref={headingRef} className="heading-xl mb-6 max-w-4xl mx-auto">
               Scheduling made <span className="italic text-[#850000] font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>effortless</span> for high-performers.
             </h1>
-            <p ref={subtextRef} className="text-slate-500 text-lg md:text-xl font-medium max-w-2xl mx-auto mb-10">
+            <p ref={subtextRef} className="text-slate-500 text-lg md:text-xl font-medium max-w-2xl mx-auto mb-8">
               The all-in-one platform for seamless appointments. Reclaim your focus and let <span className="text-[#850000] font-bold">Book&amp;Call</span> handle the logistics.
             </p>
-            <div ref={ctaRef} className="flex flex-col items-center justify-center gap-6 mb-16">
+            <div ref={ctaRef} className="flex flex-col items-center justify-center gap-6 mb-8">
               <Link href="/auth/signup" className="min-w-[200px] bg-[#850000] text-white text-lg font-bold h-16 px-10 rounded-xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center">
                 Start Free
               </Link>
@@ -1214,7 +1208,7 @@ export default function HomePage() {
             </div>
 
             {/* Calendar Preview with Floating Badges */}
-            <div ref={floatingBadgesRef} className="relative w-full max-w-4xl mx-auto mt-10 z-10">
+            <div ref={floatingBadgesRef} className="relative w-full max-w-4xl mx-auto mt-8 z-10">
               {/* Floating Badge - Left Top */}
               <div className="floating-badge absolute -top-6 left-2 md:left-8 bg-white rounded-2xl shadow-xl p-4 z-30 hidden sm:flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">

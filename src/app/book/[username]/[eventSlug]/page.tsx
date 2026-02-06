@@ -11,6 +11,10 @@ import { sanitizeName, sanitizeEmail, sanitizeMultiline } from '@/lib/utils/sani
 import { Logo } from '@/components/ui/logo';
 import confetti from 'canvas-confetti';
 import { sendEmail, generateNewBookingNotificationEmail } from '@/lib/services/email';
+import { TEXTURES } from '@/lib/constants/textures';
+import { FONTS } from '@/lib/constants/fonts';
+import { appwriteConfig, storage } from '@/lib/appwrite/config';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function BookEventPage({ params }: { params: Promise<{ username: string; eventSlug: string }> }) {
     const { username, eventSlug } = use(params);
@@ -28,6 +32,7 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [step, setStep] = useState<1 | 2>(1);
+    const [isDarkMode, setIsDarkMode] = useState(false);
     const guestTimezone = getUserTimezone();
 
     useEffect(() => {
@@ -58,6 +63,18 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
         loadData();
     }, [username, eventSlug]);
 
+    // Branding derivation
+    const branding = useMemo(() => {
+        if (!user) return null;
+        return {
+            color: user.brandColor || '#850000',
+            font: FONTS.find(f => f.name === user.themeFont) || FONTS[0],
+            texture: TEXTURES.find(t => t.id === user.themeTexture) || TEXTURES[0],
+            logo: user.logo || null,
+        };
+    }, [user]);
+
+    // Calculate available slots
     useEffect(() => {
         if (selectedDate && eventType) {
             const dayOfWeek = selectedDate.getDay();
@@ -231,24 +248,55 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
         );
     }
 
+    const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
     return (
-        <div className="min-h-screen bg-[#fcf8f8] text-[#1d0c0c] font-[Inter,sans-serif]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
-            {/* Subtle Background */}
+        <div
+            className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-[#fcf8f8] text-[#1d0c0c]'}`}
+            style={{
+                fontFamily: branding?.font.family,
+            }}
+        >
+            <ThemeToggle isDark={isDarkMode} toggle={toggleTheme} brandingColor={branding?.color} />
+
+            {branding && <link rel="stylesheet" href={branding.font.url} />}
+
+            {/* Dynamic Background */}
+            {branding && (
+                <div
+                    className="fixed inset-0 pointer-events-none opacity-40 transition-opacity"
+                    style={{
+                        backgroundImage: branding.texture.value,
+                        backgroundSize: branding.texture.id === 'clean' ? 'auto' : '20px 20px',
+                        filter: isDarkMode ? 'invert(1) opacity(0.1)' : 'none'
+                    }}
+                />
+            )}
+
+            {/* Subtle Gradient Spots using Brand Color */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-[#850000]/5 rounded-full blur-[200px]" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[40vw] h-[40vw] bg-[#850000]/3 rounded-full blur-[150px]" />
+                <div
+                    className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[200px] opacity-10"
+                    style={{ backgroundColor: branding?.color }}
+                />
+                <div
+                    className="absolute bottom-[-20%] right-[-10%] w-[40vw] h-[40vw] rounded-full blur-[150px] opacity-5"
+                    style={{ backgroundColor: branding?.color }}
+                />
             </div>
 
-            {/* Header */}
-            <header className="relative z-10 flex items-center justify-between px-6 md:px-10 py-5 bg-white/60 backdrop-blur-xl border-b border-[#850000]/5">
-                <Logo size="sm" href="/" />
-                <div className="flex gap-3">
-                    <Link href="/auth/login" className="px-5 py-2.5 text-sm font-medium text-[#6b4444] hover:text-[#1d0c0c] transition-colors">
-                        Log In
-                    </Link>
-                    <Link href="/auth/signup" className="px-6 py-2.5 bg-[#850000] text-white text-sm font-bold rounded-lg hover:bg-[#6b0000] hover:shadow-lg hover:shadow-[#850000]/30 transition-all">
-                        Sign Up Free
-                    </Link>
+            {/* Custom Header (Simple) */}
+            <header className={`relative z-10 flex items-center justify-between px-6 md:px-10 py-5 backdrop-blur-xl border-b transition-colors ${isDarkMode ? 'bg-[#141414]/60 border-white/10' : 'bg-white/60'}`} style={{ borderColor: isDarkMode ? '' : `${branding?.color}10` }}>
+                <div className="flex items-center gap-3">
+                    {branding?.logo ? (
+                        <Link href={`/book/${username}`}>
+                            <img src={branding.logo} alt="Logo" className="h-8 object-contain" />
+                        </Link>
+                    ) : (
+                        <Link href={`/book/${username}`} className="font-bold text-xl" style={{ color: branding?.color }}>
+                            {user.name}
+                        </Link>
+                    )}
                 </div>
             </header>
 
@@ -257,20 +305,27 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                 <div className="flex items-center justify-center gap-4 mb-8">
                     <div className="flex items-center gap-3">
                         <motion.div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${step >= 1 ? 'bg-[#850000] text-white shadow-lg shadow-[#850000]/30' : 'bg-gray-100 text-gray-400'}`}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all`}
+                            style={step >= 1 ? { backgroundColor: branding?.color, color: 'white', boxShadow: `0 10px 15px -3px ${branding?.color}30` } : { backgroundColor: isDarkMode ? '#333' : '#f3f4f6', color: isDarkMode ? '#888' : '#9ca3af' }}
                             animate={{ scale: step === 1 ? [1, 1.1, 1] : 1 }}
                             transition={{ repeat: step === 1 ? Infinity : 0, duration: 2 }}
                         >
                             1
                         </motion.div>
-                        <span className={`font-semibold ${step >= 1 ? 'text-[#1d0c0c]' : 'text-gray-400'}`}>Select Time</span>
+                        <span className={`font-semibold ${step >= 1 ? (isDarkMode ? 'text-white' : 'text-[#1d0c0c]') : (isDarkMode ? 'text-gray-600' : 'text-gray-400')}`}>Select Time</span>
                     </div>
-                    <div className={`w-20 h-1 rounded-full transition-all ${step >= 2 ? 'bg-[#850000]' : 'bg-gray-200'}`} />
+                    <div
+                        className={`w-20 h-1 rounded-full transition-all`}
+                        style={{ backgroundColor: step >= 2 ? branding?.color : (isDarkMode ? '#333' : '#e5e7eb') }}
+                    />
                     <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${step >= 2 ? 'bg-[#850000] text-white shadow-lg shadow-[#850000]/30' : 'bg-gray-100 text-gray-400'}`}>
+                        <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all`}
+                            style={step >= 2 ? { backgroundColor: branding?.color, color: 'white', boxShadow: `0 10px 15px -3px ${branding?.color}30` } : { backgroundColor: isDarkMode ? '#333' : '#f3f4f6', color: isDarkMode ? '#888' : '#9ca3af' }}
+                        >
                             2
                         </div>
-                        <span className={`font-semibold ${step >= 2 ? 'text-[#1d0c0c]' : 'text-gray-400'}`}>Your Details</span>
+                        <span className={`font-semibold ${step >= 2 ? (isDarkMode ? 'text-white' : 'text-[#1d0c0c]') : (isDarkMode ? 'text-gray-600' : 'text-gray-400')}`}>Your Details</span>
                     </div>
                 </div>
 
@@ -278,7 +333,8 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/80 backdrop-blur-2xl rounded-2xl shadow-2xl shadow-gray-200/50 overflow-hidden border border-[#850000]/5"
+                    className={`backdrop-blur-2xl rounded-2xl shadow-2xl overflow-hidden border transition-colors ${isDarkMode ? 'bg-[#141414]/90 border-white/10' : 'bg-white/90'}`}
+                    style={{ borderColor: isDarkMode ? '' : `${branding?.color}10`, boxShadow: `0 25px 50px -12px ${branding?.color}10` }}
                 >
                     <AnimatePresence mode="wait">
                         {step === 1 ? (
@@ -290,43 +346,40 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                                 className="flex flex-col lg:flex-row"
                             >
                                 {/* Left: Profile */}
-                                <aside className="lg:w-[300px] p-8 border-b lg:border-b-0 lg:border-r border-[#850000]/5 bg-gradient-to-br from-[#850000]/[0.02] to-white">
+                                <aside className={`lg:w-[300px] p-8 border-b lg:border-b-0 lg:border-r transition-colors ${isDarkMode ? 'bg-gradient-to-br from-[#1a1a1a] to-[#141414] border-white/10' : 'bg-gradient-to-br from-white to-gray-50/50'}`} style={{ borderColor: isDarkMode ? '' : `${branding?.color}10` }}>
                                     <div className="flex flex-col gap-5">
                                         <div className="relative w-fit">
                                             <div
-                                                className="w-20 h-20 rounded-xl bg-[#850000]/10 flex items-center justify-center shadow-xl relative overflow-hidden"
-                                                style={user.avatar ? { backgroundImage: `url("${user.avatar}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                                                className="w-20 h-20 rounded-xl flex items-center justify-center shadow-xl relative overflow-hidden transition-colors"
+                                                style={{
+                                                    backgroundImage: user.avatar ? `url("${user.avatar}")` : undefined,
+                                                    backgroundSize: 'cover',
+                                                    backgroundPosition: 'center',
+                                                    backgroundColor: `${branding?.color}10`
+                                                }}
                                             >
-                                                {!user.avatar && <span className="text-[#850000] text-3xl font-bold">{user.name?.charAt(0)}</span>}
+                                                {!user.avatar && <span className="text-3xl font-bold" style={{ color: branding?.color }}>{user.name?.charAt(0)}</span>}
                                             </div>
-                                            <motion.div
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                className="absolute -bottom-1 -right-1 w-7 h-7 bg-green-500 rounded-full flex items-center justify-center border-[3px] border-white shadow-md"
-                                            >
-                                                <span className="material-symbols-outlined text-white text-sm">check</span>
-                                            </motion.div>
                                         </div>
                                         <div>
-                                            <p className="text-[#6b4444] text-xs font-bold uppercase tracking-widest mb-1">{user.name}</p>
-                                            <h1 className="text-2xl font-bold text-[#1d0c0c]">{eventType.title}</h1>
+                                            <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-60" style={{ color: branding?.color }}>{user.name}</p>
+                                            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-[#1d0c0c]'}`}>{eventType.title}</h1>
                                         </div>
                                         <div className="space-y-2.5">
                                             {[
-                                                { icon: 'schedule', label: `${eventType.duration} min`, color: 'text-[#850000]', bg: 'bg-[#850000]/10' },
-                                                { icon: 'call', label: 'Audio Call', color: 'text-blue-600', bg: 'bg-blue-50' },
-                                                { icon: 'public', label: guestTimezone.split('/').pop()?.replace('_', ' ') || guestTimezone, color: 'text-green-600', bg: 'bg-green-50' },
+                                                { icon: 'schedule', label: `${eventType.duration} min`, color: branding?.color, bg: `${branding?.color}10` },
+                                                { icon: 'call', label: 'Audio Call', color: '#3b82f6', bg: isDarkMode ? 'rgba(59, 130, 246, 0.1)' : '#eff6ff' },
                                             ].map((item, i) => (
                                                 <div key={i} className="flex items-center gap-3">
-                                                    <div className={`w-9 h-9 ${item.bg} rounded-lg flex items-center justify-center`}>
-                                                        <span className={`material-symbols-outlined ${item.color} text-lg`}>{item.icon}</span>
+                                                    <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: item.bg }}>
+                                                        <span className="material-symbols-outlined text-lg" style={{ color: item.color }}>{item.icon}</span>
                                                     </div>
-                                                    <span className="text-[#6b4444] text-sm font-medium">{item.label}</span>
+                                                    <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}`}>{item.label}</span>
                                                 </div>
                                             ))}
                                         </div>
                                         {eventType.description && (
-                                            <p className="text-[#6b4444] text-sm leading-relaxed pt-4 border-t border-[#850000]/5">
+                                            <p className={`text-sm leading-relaxed pt-4 border-t ${isDarkMode ? 'text-gray-400 border-white/10' : 'text-[#6b4444]'}`} style={{ borderColor: isDarkMode ? '' : `${branding?.color}10` }}>
                                                 {eventType.description}
                                             </p>
                                         )}
@@ -336,38 +389,38 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                                 {/* Center: Calendar */}
                                 <section className="flex-1 p-8">
                                     <div className="flex items-center gap-3 mb-6">
-                                        <div className="w-10 h-10 bg-[#850000]/10 rounded-lg flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-[#850000]">calendar_month</span>
+                                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${branding?.color}10` }}>
+                                            <span className="material-symbols-outlined" style={{ color: branding?.color }}>calendar_month</span>
                                         </div>
-                                        <h3 className="text-lg font-bold text-[#1d0c0c]">Select a Date</h3>
+                                        <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-[#1d0c0c]'}`}>Select a Date</h3>
                                     </div>
 
+                                    {/* Calendar Implementation */}
                                     <div className="max-w-sm mx-auto">
                                         <div className="flex items-center justify-between mb-5">
                                             <button
-                                                className="w-11 h-11 rounded-lg bg-[#850000]/5 hover:bg-[#850000]/10 flex items-center justify-center transition-all hover:scale-110"
+                                                className={`w-11 h-11 rounded-lg flex items-center justify-center transition-all hover:scale-110 ${isDarkMode ? 'bg-white/5 hover:bg-white/10' : ''}`}
+                                                style={{ backgroundColor: isDarkMode ? '' : `${branding?.color}05` }}
                                                 onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
                                             >
-                                                <span className="material-symbols-outlined text-[#6b4444]">chevron_left</span>
+                                                <span className={`material-symbols-outlined ${isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}`}>chevron_left</span>
                                             </button>
-                                            <h4 className="text-xl font-bold text-[#1d0c0c]">
+                                            <h4 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-[#1d0c0c]'}`}>
                                                 {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                                             </h4>
                                             <button
-                                                className="w-11 h-11 rounded-lg bg-[#850000]/5 hover:bg-[#850000]/10 flex items-center justify-center transition-all hover:scale-110"
+                                                className={`w-11 h-11 rounded-lg flex items-center justify-center transition-all hover:scale-110 ${isDarkMode ? 'bg-white/5 hover:bg-white/10' : ''}`}
+                                                style={{ backgroundColor: isDarkMode ? '' : `${branding?.color}05` }}
                                                 onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
                                             >
-                                                <span className="material-symbols-outlined text-[#6b4444]">chevron_right</span>
+                                                <span className={`material-symbols-outlined ${isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}`}>chevron_right</span>
                                             </button>
                                         </div>
 
-                                        <div className="grid grid-cols-7 gap-1 mb-3">
-                                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
-                                                <div key={i} className="text-[#6b4444] text-[11px] font-bold uppercase text-center py-2">{d}</div>
-                                            ))}
-                                        </div>
-
                                         <div className="grid grid-cols-7 gap-1.5">
+                                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
+                                                <div key={i} className={`text-[11px] font-bold uppercase text-center py-2 ${isDarkMode ? 'text-gray-500' : 'text-[#6b4444]'}`}>{d}</div>
+                                            ))}
                                             {days.map((day, i) => {
                                                 const isAvailable = day && isDayAvailable(day);
                                                 const isSelected = day && selectedDate?.toDateString() === day.toDateString();
@@ -380,15 +433,16 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                                                         onClick={() => day && setSelectedDate(day)}
                                                         whileHover={isAvailable ? { scale: 1.1 } : {}}
                                                         whileTap={isAvailable ? { scale: 0.95 } : {}}
-                                                        className={`aspect-square rounded-lg text-sm font-semibold transition-all relative ${!day ? '' :
-                                                            !isAvailable ? 'text-gray-300 cursor-not-allowed' :
-                                                                isSelected ? 'bg-[#850000] text-white shadow-lg shadow-[#850000]/30 z-10' :
-                                                                    'text-[#1d0c0c] hover:bg-[#850000]/10'
-                                                            }`}
+                                                        className={`aspect-square rounded-lg text-sm font-semibold transition-all relative ${!day ? '' : !isAvailable ? 'text-gray-300 dark:text-gray-700 cursor-not-allowed' : ''}`}
+                                                        style={
+                                                            day && isAvailable ? (
+                                                                isSelected ? { backgroundColor: branding?.color, color: 'white', boxShadow: `0 10px 15px -3px ${branding?.color}30` } : { color: isDarkMode ? '#fff' : '#1d0c0c' }
+                                                            ) : {}
+                                                        }
                                                     >
                                                         {day?.getDate()}
                                                         {isToday && !isSelected && (
-                                                            <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-[#850000] rounded-full" />
+                                                            <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ backgroundColor: branding?.color }} />
                                                         )}
                                                     </motion.button>
                                                 );
@@ -398,26 +452,26 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                                 </section>
 
                                 {/* Right: Time Slots */}
-                                <section className="lg:w-[320px] p-8 border-t lg:border-t-0 lg:border-l border-[#850000]/5 bg-gradient-to-b from-white to-[#fcf8f8]">
+                                <section className={`lg:w-[320px] p-8 border-t lg:border-t-0 lg:border-l transition-colors ${isDarkMode ? 'bg-gradient-to-b from-[#141414] to-[#0f0f0f] border-white/10' : 'bg-gradient-to-b from-white to-[#fcf8f8]'}`} style={{ borderColor: isDarkMode ? '' : `${branding?.color}10` }}>
                                     {selectedDate ? (
                                         <>
                                             <div className="flex items-center gap-3 mb-5">
-                                                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                                                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: isDarkMode ? 'rgba(34, 197, 94, 0.1)' : '#f0fdf4' }}>
                                                     <span className="material-symbols-outlined text-green-600">event_available</span>
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-bold text-[#1d0c0c]">
+                                                    <h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-[#1d0c0c]'}`}>
                                                         {selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                                     </h3>
-                                                    <p className="text-xs text-[#6b4444]">{availableSlots.length} available</p>
+                                                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}`}>{availableSlots.length} available</p>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                                                 {availableSlots.length === 0 ? (
                                                     <div className="text-center py-10">
-                                                        <span className="material-symbols-outlined text-[#850000]/30 text-4xl mb-3 block">event_busy</span>
-                                                        <p className="text-[#6b4444]">No times available</p>
+                                                        <span className="material-symbols-outlined text-4xl mb-3 block opacity-30" style={{ color: branding?.color }}>event_busy</span>
+                                                        <p className={isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}>No times available</p>
                                                     </div>
                                                 ) : (
                                                     availableSlots.map((slot, index) => (
@@ -427,7 +481,9 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                                                             animate={{ opacity: 1, y: 0 }}
                                                             transition={{ delay: index * 0.03 }}
                                                             onClick={() => handleTimeSelect(slot)}
-                                                            className="w-full py-4 rounded-lg font-bold text-center bg-[#850000]/5 hover:bg-[#850000]/15 text-[#1d0c0c] transition-all hover:scale-[1.02] hover:shadow-md"
+                                                            className={`w-full py-4 rounded-lg font-bold text-center transition-all hover:scale-[1.02] hover:shadow-md ${isDarkMode ? 'hover:bg-white/10' : ''}`}
+                                                            style={{ backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : `${branding?.color}08`, color: isDarkMode ? 'white' : '#1d0c0c' }}
+                                                            whileHover={{ backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : `${branding?.color}15` }}
                                                         >
                                                             {formatTime(slot)}
                                                         </motion.button>
@@ -441,11 +497,12 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                                                 <motion.div
                                                     animate={{ y: [0, -5, 0] }}
                                                     transition={{ repeat: Infinity, duration: 2 }}
-                                                    className="w-16 h-16 bg-[#850000]/10 rounded-xl flex items-center justify-center mx-auto mb-4"
+                                                    className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4"
+                                                    style={{ backgroundColor: `${branding?.color}10` }}
                                                 >
-                                                    <span className="material-symbols-outlined text-[#850000]/40 text-3xl">touch_app</span>
+                                                    <span className="material-symbols-outlined text-3xl opacity-40" style={{ color: branding?.color }}>touch_app</span>
                                                 </motion.div>
-                                                <p className="text-[#6b4444] font-medium">Select a date to see times</p>
+                                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'} font-medium state-instruction`}>Select a date to see times</p>
                                             </div>
                                         </div>
                                     )}
@@ -461,69 +518,66 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                             >
                                 <button
                                     onClick={() => setStep(1)}
-                                    className="flex items-center gap-2 text-[#6b4444] hover:text-[#1d0c0c] mb-8 transition-colors"
+                                    className={`flex items-center gap-2 mb-8 transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-[#6b4444] hover:text-[#1d0c0c]'}`}
                                 >
                                     <span className="material-symbols-outlined">arrow_back</span>
                                     Change time
                                 </button>
 
                                 {/* Booking Summary */}
-                                <div className="bg-[#850000]/5 rounded-xl p-5 mb-8 border border-[#850000]/10">
+                                <div className={`rounded-xl p-5 mb-8 border ${isDarkMode ? 'bg-white/5 border-white/10' : ''}`} style={{ backgroundColor: isDarkMode ? '' : `${branding?.color}05`, borderColor: isDarkMode ? '' : `${branding?.color}10` }}>
                                     <div className="flex items-center justify-between flex-wrap gap-4">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 bg-[#850000] rounded-lg flex items-center justify-center shadow-lg shadow-[#850000]/30">
+                                            <div className="w-14 h-14 rounded-lg flex items-center justify-center shadow-lg" style={{ backgroundColor: branding?.color, boxShadow: `0 10px 15px -3px ${branding?.color}40` }}>
                                                 <span className="material-symbols-outlined text-white text-2xl">event</span>
                                             </div>
                                             <div>
-                                                <h3 className="font-bold text-[#1d0c0c] text-lg">{eventType.title}</h3>
-                                                <p className="text-[#6b4444] text-sm">with {user.name}</p>
+                                                <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-[#1d0c0c]'}`}>{eventType.title}</h3>
+                                                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}`}>with {user.name}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="text-right">
-                                                <p className="text-[#1d0c0c] font-bold">
+                                                <p className={`${isDarkMode ? 'text-white' : 'text-[#1d0c0c]'} font-bold`}>
                                                     {selectedDate?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                                 </p>
-                                                <p className="text-[#850000] font-bold">{selectedTime && formatTime(selectedTime)}</p>
+                                                <p className="font-bold" style={{ color: branding?.color }}>{selectedTime && formatTime(selectedTime)}</p>
                                             </div>
-                                            <div className="w-12 h-12 bg-[#850000]/10 rounded-lg flex items-center justify-center">
-                                                <span className="material-symbols-outlined text-[#850000]">schedule</span>
+                                            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${branding?.color}10` }}>
+                                                <span className="material-symbols-outlined" style={{ color: branding?.color }}>schedule</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Form */}
-                                <h2 className="text-2xl font-bold text-[#1d0c0c] mb-6">Your Details</h2>
+                                <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-[#1d0c0c]'}`}>Your Details</h2>
                                 <div className="space-y-5">
+                                    {['name', 'email'].map((field) => (
+                                        <div key={field}>
+                                            <label className={`block text-sm font-semibold mb-2 capitalise ${isDarkMode ? 'text-gray-300' : 'text-[#1d0c0c]'}`}>{field === 'name' ? 'Your Name' : 'Email Address'} *</label>
+                                            <input
+                                                type={field === 'email' ? 'email' : 'text'}
+                                                value={formData[field as keyof typeof formData]}
+                                                onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                                                placeholder={field === 'name' ? "Enter your full name" : "you@example.com"}
+                                                className={`w-full px-5 py-4 rounded-lg transition-all text-lg border ${isDarkMode ? 'bg-white/5 border-white/10 text-white placeholder-gray-600 focus:bg-white/10' : 'text-[#1d0c0c] placeholder:text-[#6b4444]/50 focus:bg-white'}`}
+                                                style={{
+                                                    borderColor: isDarkMode ? '' : `${branding?.color}10`,
+                                                    backgroundColor: isDarkMode ? '' : `${branding?.color}05`,
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
                                     <div>
-                                        <label className="block text-sm font-semibold text-[#1d0c0c] mb-2">Your Name *</label>
-                                        <input
-                                            type="text"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            placeholder="Enter your full name"
-                                            className="w-full px-5 py-4 rounded-lg bg-[#850000]/5 text-[#1d0c0c] placeholder:text-[#6b4444]/50 focus:ring-2 focus:ring-[#850000]/30 focus:bg-white transition-all text-lg border border-[#850000]/10"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-[#1d0c0c] mb-2">Email Address *</label>
-                                        <input
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            placeholder="you@example.com"
-                                            className="w-full px-5 py-4 rounded-lg bg-[#850000]/5 text-[#1d0c0c] placeholder:text-[#6b4444]/50 focus:ring-2 focus:ring-[#850000]/30 focus:bg-white transition-all text-lg border border-[#850000]/10"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-[#1d0c0c] mb-2">Additional Notes <span className="text-[#6b4444] font-normal">(Optional)</span></label>
+                                        <label className={`block text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-[#1d0c0c]'}`}>Additional Notes <span className={`${isDarkMode ? 'text-gray-500' : 'text-[#6b4444]'} font-normal`}>(Optional)</span></label>
                                         <textarea
                                             value={formData.notes}
                                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                             placeholder="Anything you'd like to discuss..."
                                             rows={3}
-                                            className="w-full px-5 py-4 rounded-lg bg-[#850000]/5 text-[#1d0c0c] placeholder:text-[#6b4444]/50 focus:ring-2 focus:ring-[#850000]/30 focus:bg-white transition-all resize-none border border-[#850000]/10"
+                                            className={`w-full px-5 py-4 rounded-lg transition-all resize-none border ${isDarkMode ? 'bg-white/5 border-white/10 text-white placeholder-gray-600 focus:bg-white/10' : 'bg-[#850000]/5 text-[#1d0c0c] placeholder:text-[#6b4444]/50'}`}
+                                            style={{ borderColor: isDarkMode ? '' : `${branding?.color}10`, backgroundColor: isDarkMode ? '' : `${branding?.color}05` }}
                                         />
                                     </div>
                                 </div>
@@ -545,7 +599,8 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                                     disabled={isSubmitting || !formData.name.trim() || !formData.email.trim()}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
-                                    className="mt-8 w-full py-5 bg-[#850000] text-white rounded-lg font-bold text-lg shadow-xl shadow-[#850000]/30 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#6b0000]"
+                                    className="mt-8 w-full py-5 text-white rounded-lg font-bold text-lg shadow-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{ backgroundColor: branding?.color, boxShadow: `0 10px 15px -3px ${branding?.color}30` }}
                                 >
                                     {isSubmitting ? (
                                         <>
@@ -559,28 +614,27 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                                         </>
                                     )}
                                 </motion.button>
-
-                                <p className="text-center text-[#6b4444] text-sm mt-4">
-                                    You'll receive a confirmation email at <span className="text-[#1d0c0c]">{formData.email || 'your email'}</span>
-                                </p>
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </motion.div>
 
-                {/* Footer */}
-                <footer className="mt-10 text-center flex flex-col items-center gap-2">
-                    <p className="text-[#6b4444] text-sm">Powered by</p>
-                    <Logo size="sm" href="/" />
+                {/* Mandatory Branding Footer */}
+                <footer className="mt-20 text-center flex flex-col items-center gap-3">
+                    <Link href="/" className={`inline-flex items-center gap-2 px-4 py-2 backdrop-blur-md rounded-full border hover:bg-opacity-80 transition-colors shadow-sm ${isDarkMode ? 'bg-white/10 border-white/10 text-gray-400 hover:bg-white/20' : 'bg-white/50 border-gray-100 hover:bg-white text-gray-500'}`}>
+                        <span className="text-xs font-semibold uppercase tracking-wider">Made with</span>
+                        <div className={`h-4 w-px ${isDarkMode ? 'bg-white/20' : 'bg-gray-200'}`} />
+                        <Logo size="sm" href="" className="scale-75 origin-left" />
+                    </Link>
                 </footer>
             </main>
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: #f5f5f5; border-radius: 4px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(133,0,0,0.2); border-radius: 4px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(133,0,0,0.3); }
+                .custom-scrollbar::-webkit-scrollbar-track { background: ${isDarkMode ? '#1a1a1a' : '#f5f5f5'}; border-radius: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}; border-radius: 4px; }
             `}</style>
         </div>
     );
 }
+

@@ -6,6 +6,7 @@ interface LogoProps {
     showText?: boolean;
     variant?: 'light' | 'dark';
     href?: string;
+    className?: string; // Added className prop
 }
 
 const sizeClasses = {
@@ -14,11 +15,11 @@ const sizeClasses = {
     lg: { width: 240, height: 80 },
 };
 
-export function Logo({ size = 'md', showText = true, variant = 'dark', href = '/' }: LogoProps) {
+export function Logo({ size = 'md', showText = true, variant = 'dark', href = '/', className = '' }: LogoProps) {
     const dimensions = sizeClasses[size];
 
     const content = (
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${className}`}>
             <Image
                 src="/logo.png"
                 alt="Book&Call"

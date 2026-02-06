@@ -101,48 +101,94 @@ export function DashboardSidebar({ isAdmin = false, isCollapsed = false, onToggl
 
     return (
         <>
-            {/* Mobile Header */}
-            <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-4" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(133, 0, 0, 0.05)' }}>
+            {/* Mobile Header - High Z-index */}
+            <div className="md:hidden fixed top-0 left-0 right-0 z-[100] h-16 flex items-center justify-between px-6" style={{ background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                 <Logo size="sm" href="/dashboard" />
-                <button className="w-10 h-10 rounded-lg bg-[#850000]/5 flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                    <span className="material-symbols-outlined text-[#1d0c0c]">{isMobileMenuOpen ? 'close' : 'menu'}</span>
+                <button
+                    className="w-10 h-10 rounded-xl bg-gray-50 active:bg-gray-100 flex items-center justify-center transition-colors -mr-2"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                >
+                    <span className="material-symbols-outlined text-gray-900">{isMobileMenuOpen ? 'close' : 'menu'}</span>
                 </button>
             </div>
 
-            {/* Mobile Menu */}
+            {/* Mobile Menu Overlay */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] pt-16" onClick={() => setIsMobileMenuOpen(false)}>
-                        <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ type: 'spring', damping: 30, stiffness: 300 }} className="w-72 h-full bg-white shadow-2xl p-6 flex flex-col" onClick={(e) => e.stopPropagation()}>
-                            <div className="mb-6">
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="md:hidden fixed inset-0 bg-black/60 z-[90] backdrop-blur-sm"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ x: '-100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '-100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="md:hidden fixed inset-y-0 left-0 z-[110] w-[85%] max-w-[300px] bg-white shadow-2xl flex flex-col h-full"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                                 <Logo size="md" href="/dashboard" />
+                                <button
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-500"
+                                >
+                                    <span className="material-symbols-outlined text-lg">close</span>
+                                </button>
                             </div>
-                            <nav className="flex flex-col gap-2 flex-1">
+
+                            <nav className="flex-1 overflow-y-auto p-4 space-y-1">
                                 {navItems.map((item) => {
                                     const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
                                     return (
-                                        <Link key={item.href} href={item.href} onClick={() => setIsMobileMenuOpen(false)}
-                                            className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all ${isActive
-                                                ? 'bg-[#1d0c0c] text-white shadow-lg shadow-[#1d0c0c]/20'
-                                                : 'text-gray-600 hover:bg-gray-50 hover:text-[#1d0c0c]'}`}>
-                                            <span className="material-symbols-outlined text-xl">{item.icon}</span>
-                                            <span className={`text-sm ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                            className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all ${isActive
+                                                ? 'bg-[#1d0c0c] text-white shadow-lg shadow-[#1d0c0c]/10'
+                                                : 'text-gray-600 hover:bg-gray-50 hover:text-black'}`}
+                                        >
+                                            <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                                            <span className={`text-[15px] ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
+                                            {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white" />}
                                         </Link>
                                     );
                                 })}
                             </nav>
-                            <div className="space-y-3 mt-auto">
-                                <button onClick={handleCopyLink} className="copy-btn flex w-full items-center justify-center gap-2 rounded-xl bg-[#850000] py-3.5 px-4 text-white font-bold text-sm shadow-md hover:shadow-lg hover:bg-[#6b0000] transition-all active:scale-95">
+
+                            <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-3">
+                                {/* Mobile User Info */}
+                                {userProfile && (
+                                    <div className="flex items-center gap-3 px-2 py-2 mb-2">
+                                        <div
+                                            className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[#1d0c0c] font-bold shadow-sm"
+                                            style={userProfile.avatar ? { backgroundImage: `url('${userProfile.avatar}')`, backgroundSize: 'cover' } : undefined}
+                                        >
+                                            {!userProfile.avatar && (userProfile.name?.[0] || 'U')}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm text-[#1d0c0c]">{userProfile.name}</p>
+                                            <p className="text-xs text-gray-500 truncate max-w-[150px]">{userProfile.email}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button onClick={handleCopyLink} className="copy-btn flex w-full items-center justify-center gap-2 rounded-xl bg-[#850000] py-3.5 text-white font-bold text-sm shadow-md active:scale-95 transition-transform">
                                     <span className="material-symbols-outlined text-xl">{copied ? 'check' : 'content_copy'}</span>
                                     <span>{copied ? 'Link Copied!' : 'Copy Booking Link'}</span>
                                 </button>
-                                <button onClick={handleSignOut} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-50 py-3 text-red-600 font-medium text-sm hover:bg-red-50 transition-all border border-gray-100">
+                                <button onClick={handleSignOut} className="flex w-full items-center justify-center gap-2 rounded-xl bg-white border border-gray-200 py-3.5 text-red-600 font-medium text-sm active:bg-red-50 transition-colors">
                                     <span className="material-symbols-outlined text-xl">logout</span>
                                     Sign Out
                                 </button>
                             </div>
                         </motion.div>
-                    </motion.div>
+                    </>
                 )}
             </AnimatePresence>
 

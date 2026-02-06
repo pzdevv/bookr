@@ -6,12 +6,18 @@ import { use } from 'react';
 import { userService, eventTypeService, User, EventType } from '@/lib/appwrite/database';
 import { Logo } from '@/components/ui/logo';
 import { UserBookingPageSkeleton } from '@/components/ui/skeleton';
+import { TEXTURES } from '@/lib/constants/textures';
+import { FONTS } from '@/lib/constants/fonts';
+import { appwriteConfig, storage } from '@/lib/appwrite/config';
+
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function UserBookingPage({ params }: { params: Promise<{ username: string }> }) {
     const { username } = use(params);
     const [user, setUser] = useState<User | null>(null);
     const [eventTypes, setEventTypes] = useState<EventType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isDarkMode, setIsDarkMode] = useState(false);
 
     useEffect(() => {
         const loadData = async () => {
@@ -37,15 +43,11 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
 
     if (!user) {
         return (
-            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
+            <div className="min-h-screen bg-[#fcf8f8] flex items-center justify-center p-4">
                 <div className="bg-white/80 backdrop-blur-2xl rounded-2xl shadow-2xl shadow-gray-200/50 p-12 max-w-md text-center border border-[#850000]/5">
-                    <div className="w-24 h-24 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <span className="material-symbols-outlined text-red-400 text-5xl">person_off</span>
-                    </div>
+                    {/* ... (keep existing 404 content, maybe simplistic here) ... */}
                     <h1 className="text-3xl font-bold text-[#1d0c0c] mb-3">User not found</h1>
-                    <p className="text-[#6b4444] mb-8">This user doesn't exist or may have been removed.</p>
-                    <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-[#850000] text-white font-bold rounded-lg hover:bg-[#6b0000] hover:shadow-2xl hover:shadow-[#850000]/30 transition-all">
-                        <span className="material-symbols-outlined">home</span>
+                    <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-[#850000] text-white font-bold rounded-lg hover:bg-[#6b0000] transition-all">
                         Go to homepage
                     </Link>
                 </div>
@@ -53,84 +55,178 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
         );
     }
 
+    const branding = {
+        color: user?.brandColor || '#850000',
+        font: FONTS.find(f => f.name === user?.themeFont) || FONTS[0],
+        texture: TEXTURES.find(t => t.id === user?.themeTexture) || TEXTURES[0],
+        logo: user?.logo || null,
+    };
+
+    const getSocialIcon = (platform: string) => {
+        switch (platform.toLowerCase()) {
+            case 'instagram': return 'photo_camera';
+            case 'twitter': return 'alternate_email';
+            case 'linkedin': return 'work';
+            case 'youtube': return 'smart_display';
+            case 'website': return 'language';
+            case 'github': return 'code';
+            default: return 'link';
+        }
+    };
+
+    const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
     return (
-        <div className="min-h-screen bg-[#fcf8f8] text-[#1d0c0c] font-[Inter,sans-serif]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)', backgroundSize: '32px 32px' }}>
-            {/* Subtle Background */}
+        <div
+            className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-[#fcf8f8] text-[#1d0c0c]'}`}
+            style={{
+                fontFamily: branding.font.family,
+            }}
+        >
+            <ThemeToggle isDark={isDarkMode} toggle={toggleTheme} brandingColor={branding.color} />
+
+            {/* Load Font */}
+            <link rel="stylesheet" href={branding.font.url} />
+
+            {/* Dynamic Background */}
+            <div
+                className="fixed inset-0 pointer-events-none opacity-40 transition-opacity"
+                style={{
+                    backgroundImage: branding.texture.value,
+                    backgroundSize: branding.texture.id === 'clean' ? 'auto' : '20px 20px',
+                    filter: isDarkMode ? 'invert(1) opacity(0.1)' : 'none'
+                }}
+            />
+
+            {/* Subtle Gradient Spots */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-[#850000]/5 rounded-full blur-[200px]" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[40vw] h-[40vw] bg-[#850000]/3 rounded-full blur-[150px]" />
+                <div
+                    className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full blur-[200px] opacity-10"
+                    style={{ backgroundColor: branding.color }}
+                />
+                <div
+                    className="absolute bottom-[-20%] right-[-10%] w-[40vw] h-[40vw] rounded-full blur-[150px] opacity-5"
+                    style={{ backgroundColor: branding.color }}
+                />
             </div>
 
-            {/* Header */}
-            <header className="relative z-10 flex items-center justify-between px-6 md:px-10 py-5 bg-white/60 backdrop-blur-xl border-b border-[#850000]/5">
-                <Logo size="sm" href="/" />
-                <div className="flex gap-3">
-                    <Link href="/auth/login" className="px-5 py-2.5 text-sm font-medium text-[#6b4444] hover:text-[#1d0c0c] transition-colors">
-                        Log In
-                    </Link>
-                    <Link href="/auth/signup" className="px-6 py-2.5 bg-[#850000] text-white text-sm font-bold rounded-lg hover:bg-[#6b0000] hover:shadow-lg hover:shadow-[#850000]/30 transition-all">
-                        Sign Up Free
-                    </Link>
-                </div>
-            </header>
-
             <main className="relative z-10 max-w-2xl mx-auto py-16 px-4">
-                {/* Profile Card */}
+                {/* Branding/Logo Header */}
+                <div className="text-center mb-8">
+                    {branding.logo ? (
+                        <div className="inline-block w-24 h-24 mb-4">
+                            <img src={branding.logo} alt={user.name} className="w-full h-full object-contain" />
+                        </div>
+                    ) : (
+                        <div className="inline-block mb-4">
+                            <div
+                                className="w-24 h-24 rounded-full flex items-center justify-center shadow-lg bg-cover bg-center border-4 border-white transition-colors"
+                                style={{
+                                    backgroundImage: user.avatar ? `url('${user.avatar}')` : undefined,
+                                    backgroundColor: user.avatar ? 'transparent' : `${branding.color}10`,
+                                    borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'white'
+                                }}
+                            >
+                                {!user.avatar && <span className="text-3xl font-bold" style={{ color: branding.color }}>{user.name?.charAt(0)}</span>}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Hero Content */}
                 <div className="text-center mb-12">
-                    <div className="relative inline-block mb-6">
-                        <div
-                            className="w-32 h-32 rounded-2xl bg-[#850000]/10 flex items-center justify-center shadow-xl bg-cover bg-center border-4 border-white"
-                            style={user.avatar ? { backgroundImage: `url('${user.avatar}')` } : undefined}
-                        >
-                            {!user.avatar && <span className="text-[#850000] text-5xl font-bold">{user.name?.charAt(0)}</span>}
+                    <h1 className={`text-4xl font-bold mb-4 tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1d0c0c]'}`}>
+                        {user.heroTitle || user.name}
+                    </h1>
+                    <p className={`text-xl mb-4 opacity-90 ${isDarkMode ? 'text-gray-300' : 'text-[#6b4444]'}`}>
+                        {user.heroSubtitle || (user.bio ? user.bio : 'Book a time to connect!')}
+                    </p>
+                    {user.heroDescription && (
+                        <p className={`text-base max-w-lg mx-auto leading-relaxed opacity-80 ${isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}`}>
+                            {user.heroDescription}
+                        </p>
+                    )}
+
+                    {/* Social Links */}
+                    {user.socialLinks && (
+                        <div className="flex items-center justify-center gap-4 mt-6">
+                            {JSON.parse(user.socialLinks).map((link: { platform: string, url: string }, i: number) => (
+                                <a
+                                    key={i}
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`w-10 h-10 rounded-full border flex items-center justify-center hover:scale-110 transition-transform shadow-sm hover:shadow-md group ${isDarkMode ? 'bg-white/10 border-white/10' : 'bg-white'}`}
+                                    style={{ borderColor: isDarkMode ? '' : `${branding.color}20` }}
+                                >
+                                    <span
+                                        className="material-symbols-outlined text-lg opacity-70 group-hover:opacity-100 transition-opacity"
+                                        style={{ color: isDarkMode ? 'white' : branding.color }}
+                                    >
+                                        {getSocialIcon(link.platform)}
+                                    </span>
+                                </a>
+                            ))}
                         </div>
-                        <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center border-4 border-[#fcf8f8] shadow-lg">
-                            <span className="material-symbols-outlined text-white">check</span>
-                        </div>
-                    </div>
-                    <h1 className="text-3xl font-bold text-[#1d0c0c] mb-2">{user.name}</h1>
-                    <p className="text-[#6b4444] text-lg max-w-md mx-auto">{user.bio || 'Book a time to connect!'}</p>
+                    )}
                 </div>
 
                 {/* Event Types */}
                 <div className="space-y-4">
                     {eventTypes.length === 0 ? (
-                        <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-[#850000]/5 p-12 text-center shadow-lg">
-                            <div className="w-16 h-16 bg-[#850000]/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                                <span className="material-symbols-outlined text-[#850000]/30 text-3xl">event_busy</span>
+                        <div
+                            className={`backdrop-blur-xl rounded-2xl border p-12 text-center shadow-lg transition-colors ${isDarkMode ? 'bg-[#141414]/60 border-white/10' : 'bg-white/80'}`}
+                            style={{ borderColor: isDarkMode ? '' : `${branding.color}10` }}
+                        >
+                            <div
+                                className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4"
+                                style={{ backgroundColor: `${branding.color}10` }}
+                            >
+                                <span className="material-symbols-outlined text-3xl" style={{ color: `${branding.color}50` }}>event_busy</span>
                             </div>
-                            <p className="text-[#6b4444]">No event types available yet.</p>
+                            <p className={isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}>No event types available yet.</p>
                         </div>
                     ) : (
                         eventTypes.map((event) => (
                             <Link
                                 key={event.$id}
                                 href={`/book/${username}/${event.slug}`}
-                                className="block bg-white/80 backdrop-blur-xl rounded-xl border border-[#850000]/5 p-6 hover:bg-white hover:border-[#850000]/20 hover:shadow-xl hover:shadow-[#850000]/5 transition-all group hover:scale-[1.02] shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none"
+                                className={`block backdrop-blur-xl rounded-xl border p-6 hover:shadow-xl transition-all group hover:scale-[1.02] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none ${isDarkMode ? 'bg-[#141414]/80 border-white/10 hover:bg-[#1a1a1a]' : 'bg-white/90 hover:bg-white'}`}
+                                style={{ borderColor: isDarkMode ? '' : `${branding.color}10` }}
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-start gap-4">
                                         <div
                                             className="w-4 h-4 rounded-full mt-1.5 shadow-lg"
-                                            style={{ backgroundColor: event.color || '#850000', boxShadow: `0 0 20px ${event.color || '#850000'}40` }}
+                                            style={{ backgroundColor: event.color || branding.color, boxShadow: `0 0 20px ${event.color || branding.color}40` }}
                                         />
                                         <div>
-                                            <h3 className="text-xl font-bold text-[#1d0c0c] group-hover:text-[#850000] transition-colors">{event.title}</h3>
-                                            <p className="text-[#6b4444] mt-1">{event.description || 'No description'}</p>
+                                            <h3
+                                                className={`text-xl font-bold transition-colors ${isDarkMode ? 'text-white' : 'text-[#1d0c0c]'}`}
+                                            >
+                                                {event.title}
+                                            </h3>
+                                            <p className={`mt-1 text-sm font-medium opacity-80 ${isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}`}>{event.description || 'No description'}</p>
                                             <div className="flex items-center gap-6 mt-4">
-                                                <span className="flex items-center gap-2 text-sm text-[#6b4444]">
-                                                    <span className="material-symbols-outlined text-[#850000] text-lg">schedule</span>
+                                                <span className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}`}>
+                                                    <span className="material-symbols-outlined text-lg" style={{ color: branding.color }}>schedule</span>
                                                     {event.duration} min
                                                 </span>
-                                                <span className="flex items-center gap-2 text-sm text-[#6b4444]">
-                                                    <span className="material-symbols-outlined text-[#850000] text-lg">call</span>
+                                                <span className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-[#6b4444]'}`}>
+                                                    <span className="material-symbols-outlined text-lg" style={{ color: branding.color }}>call</span>
                                                     Audio call
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="w-10 h-10 bg-[#850000]/10 rounded-lg flex items-center justify-center group-hover:bg-[#850000] transition-all">
-                                        <span className="material-symbols-outlined text-[#850000] group-hover:text-white transition-colors">arrow_forward</span>
+                                    <div
+                                        className="w-10 h-10 rounded-lg flex items-center justify-center transition-all group-hover:text-white"
+                                        style={{
+                                            backgroundColor: `${branding.color}10`,
+                                            color: branding.color
+                                        }}
+                                    >
+                                        <span className="material-symbols-outlined group-hover:scale-110 transition-transform">arrow_forward</span>
                                     </div>
                                 </div>
                             </Link>
@@ -138,10 +234,13 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
                     )}
                 </div>
 
-                {/* Footer */}
-                <footer className="mt-16 text-center flex flex-col items-center gap-2">
-                    <p className="text-[#6b4444] text-sm">Powered by</p>
-                    <Logo size="sm" href="/" />
+                {/* Mandatory Branding Footer */}
+                <footer className="mt-20 text-center flex flex-col items-center gap-3">
+                    <Link href="/" className={`inline-flex items-center gap-2 px-4 py-2 backdrop-blur-md rounded-full border hover:bg-opacity-80 transition-colors shadow-sm ${isDarkMode ? 'bg-white/10 border-white/10 text-gray-400 hover:bg-white/20' : 'bg-white/50 border-gray-100 hover:bg-white text-gray-500'}`}>
+                        <span className="text-xs font-semibold uppercase tracking-wider">Made with</span>
+                        <div className={`h-4 w-px ${isDarkMode ? 'bg-white/20' : 'bg-gray-200'}`} />
+                        <Logo size="sm" href="" className="scale-75 origin-left" />
+                    </Link>
                 </footer>
             </main>
         </div>

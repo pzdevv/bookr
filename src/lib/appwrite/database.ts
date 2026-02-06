@@ -12,6 +12,15 @@ export interface User {
     bio?: string; // Profile description
     avatar?: string;
     role: 'user' | 'admin';
+    brandColor?: string; // Custom brand color
+    themeFont?: string; // Google Font Name
+    themeTexture?: string; // Texture file ID or preset name
+    logo?: string; // Logo file ID
+    ctaText?: string; // Custom CTA text
+    heroTitle?: string; // Custom Hero Title
+    heroSubtitle?: string; // Custom Hero Subtitle
+    heroDescription?: string; // Custom Hero Description
+    socialLinks?: string; // JSON string of social links
     timezone: string;
     $createdAt: string;
     $updatedAt: string;

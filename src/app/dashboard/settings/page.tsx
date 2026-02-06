@@ -7,10 +7,12 @@ import { useAuth } from '@/lib/hooks/use-auth';
 import { userService } from '@/lib/appwrite/database';
 import { sanitizeName, sanitizeSlug, sanitizeMultiline } from '@/lib/utils/sanitize';
 import { AvatarCropper } from '@/components/ui/avatar-cropper';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
+import { ColorPicker } from '@/components/ui/color-picker';
+import { TexturePicker } from '@/components/ui/texture-picker';
+import { FontPicker } from '@/components/ui/font-picker';
+import { LogoUpload } from '@/components/ui/logo-upload';
+import { SocialsEditor } from '@/components/ui/socials-editor';
+import { appwriteConfig } from '@/lib/appwrite/config';
 
 export default function SettingsPage() {
     const { user, userProfile, refreshUser } = useAuth();
@@ -18,6 +20,18 @@ export default function SettingsPage() {
     const [username, setUsername] = useState('');
     const [bio, setBio] = useState('');
     const [timezone, setTimezone] = useState('');
+
+    // Customization State
+    const [brandColor, setBrandColor] = useState('#850000');
+    const [themeFont, setThemeFont] = useState('Inter');
+    const [themeTexture, setThemeTexture] = useState('clean');
+    const [logo, setLogo] = useState('');
+    const [ctaText, setCtaText] = useState('Book a Meeting');
+    const [heroTitle, setHeroTitle] = useState('');
+    const [heroSubtitle, setHeroSubtitle] = useState('');
+    const [heroDescription, setHeroDescription] = useState('');
+    const [socialLinks, setSocialLinks] = useState('[]');
+
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState('');
@@ -40,43 +54,21 @@ export default function SettingsPage() {
             setBio(userProfile.bio || '');
             setTimezone(userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
             setAvatarUrl(userProfile.avatar || '');
+
+            // Populate customization fields
+            setBrandColor(userProfile.brandColor || '#850000');
+            setThemeFont(userProfile.themeFont || 'Inter');
+            setThemeTexture(userProfile.themeTexture || 'clean');
+            setLogo(userProfile.logo || '');
+            setCtaText(userProfile.ctaText || '');
+            setHeroTitle(userProfile.heroTitle || '');
+            setHeroSubtitle(userProfile.heroSubtitle || '');
+            setHeroDescription(userProfile.heroDescription || '');
+            setSocialLinks(userProfile.socialLinks || '[]');
         }
     }, [userProfile]);
 
-    // GSAP Scroll Animations
-    useEffect(() => {
-        if (!containerRef.current) return;
 
-        const sections = containerRef.current.querySelectorAll('.settings-section');
-
-        sections.forEach((section, index) => {
-            gsap.fromTo(section,
-                {
-                    opacity: 0,
-                    y: 60,
-                    scale: 0.95
-                },
-                {
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                    duration: 0.8,
-                    ease: 'power3.out',
-                    scrollTrigger: {
-                        trigger: section,
-                        start: 'top 85%',
-                        end: 'top 50%',
-                        toggleActions: 'play none none reverse'
-                    },
-                    delay: index * 0.1
-                }
-            );
-        });
-
-        return () => {
-            ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-        };
-    }, []);
 
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
@@ -122,11 +114,7 @@ export default function SettingsPage() {
             await refreshUser();
             setSaveMessage('Avatar updated!');
 
-            // Animate the avatar
-            gsap.fromTo('.avatar-container',
-                { scale: 1.2, opacity: 0 },
-                { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.7)' }
-            );
+
         } catch (error) {
             console.error('Avatar upload error:', error);
             setSaveMessage('Failed to upload avatar');
@@ -176,16 +164,21 @@ export default function SettingsPage() {
                 name: cleanName,
                 username: cleanUsername,
                 bio: cleanBio,
-                timezone
+                timezone,
+                brandColor,
+                themeFont,
+                themeTexture,
+                logo: logo || undefined, // Use undefined/null to avoid URL validation error on empty string
+                ctaText,
+                heroTitle,
+                heroSubtitle,
+                heroDescription,
+                socialLinks
             });
             await refreshUser();
             setSaveMessage('Settings saved!');
 
-            // Success animation
-            gsap.fromTo('.save-btn',
-                { scale: 1 },
-                { scale: 1.05, duration: 0.2, yoyo: true, repeat: 1, ease: 'power2.out' }
-            );
+
         } catch (error) {
             console.error('Error:', error);
             setSaveMessage('Failed to save');
@@ -338,6 +331,87 @@ export default function SettingsPage() {
                                 <option value="Asia/Kathmandu">Kathmandu (NPT)</option>
                             </select>
                         </div>
+                    </div>
+                </div>
+
+                {/* Branding Section */}
+                <div className="settings-section bg-white rounded-xl border border-[#850000]/5 overflow-hidden shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)]">
+                    <div className="px-6 py-5 border-b border-[#850000]/5">
+                        <h3 className="text-lg font-bold text-[#1d0c0c]">Look & Feel</h3>
+                        <p className="text-sm text-[#6b4444]">Customize your booking page appearance.</p>
+                    </div>
+                    <div className="p-6 space-y-8">
+                        {appwriteConfig.buckets.logos && (
+                            <LogoUpload
+                                bucketId={appwriteConfig.buckets.logos}
+                                value={logo}
+                                onChange={setLogo}
+                            />
+                        )}
+                        <ColorPicker value={brandColor} onChange={setBrandColor} />
+                        <FontPicker value={themeFont} onChange={setThemeFont} />
+                        <TexturePicker value={themeTexture} onChange={setThemeTexture} />
+                    </div>
+                </div>
+
+                {/* Page Content Section */}
+                <div className="settings-section bg-white rounded-xl border border-[#850000]/5 overflow-hidden shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)]">
+                    <div className="px-6 py-5 border-b border-[#850000]/5">
+                        <h3 className="text-lg font-bold text-[#1d0c0c]">Page Content</h3>
+                        <p className="text-sm text-[#6b4444]">Customize the text on your booking page.</p>
+                    </div>
+                    <div className="p-6 space-y-6">
+                        <div>
+                            <label className="block text-xs font-semibold text-[#1d0c0c] mb-1.5">Hero Title</label>
+                            <input
+                                type="text"
+                                value={heroTitle}
+                                onChange={(e) => setHeroTitle(e.target.value)}
+                                className="w-full h-11 px-4 rounded-lg border border-[#850000]/10 text-sm focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition-all bg-white shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)]"
+                                placeholder={`Book a meeting with ${name}`}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-[#1d0c0c] mb-1.5">Hero Subtitle</label>
+                            <input
+                                type="text"
+                                value={heroSubtitle}
+                                onChange={(e) => setHeroSubtitle(e.target.value)}
+                                className="w-full h-11 px-4 rounded-lg border border-[#850000]/10 text-sm focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition-all bg-white shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)]"
+                                placeholder="Let's connect and discuss your needs."
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-[#1d0c0c] mb-1.5">Description</label>
+                            <textarea
+                                value={heroDescription}
+                                onChange={(e) => setHeroDescription(e.target.value)}
+                                rows={2}
+                                className="w-full px-4 py-3 rounded-lg border border-[#850000]/10 text-sm focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition-all resize-none bg-white shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)]"
+                                placeholder="Optional longer description..."
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-[#1d0c0c] mb-1.5">CTA Button Text</label>
+                            <input
+                                type="text"
+                                value={ctaText}
+                                onChange={(e) => setCtaText(e.target.value)}
+                                className="w-full h-11 px-4 rounded-lg border border-[#850000]/10 text-sm focus:ring-2 focus:ring-[#850000]/20 focus:border-[#850000] transition-all bg-white shadow-[2px_2px_0px_0px_rgba(133,0,0,0.05)]"
+                                placeholder="Book Appointment"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Social Links Section */}
+                <div className="settings-section bg-white rounded-xl border border-[#850000]/5 overflow-hidden shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)]">
+                    <div className="px-6 py-5 border-b border-[#850000]/5">
+                        <h3 className="text-lg font-bold text-[#1d0c0c]">Social Links</h3>
+                        <p className="text-sm text-[#6b4444]">Add links to your social profiles.</p>
+                    </div>
+                    <div className="p-6">
+                        <SocialsEditor value={socialLinks} onChange={setSocialLinks} />
                     </div>
                 </div>
 

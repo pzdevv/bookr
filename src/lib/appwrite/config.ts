@@ -15,6 +15,8 @@ export const appwriteConfig = {
   buckets: {
     avatars: process.env.NEXT_PUBLIC_APPWRITE_AVATARS_BUCKET_ID!,
     callDocuments: process.env.NEXT_PUBLIC_APPWRITE_CALL_DOCUMENTS_BUCKET_ID!,
+    logos: process.env.NEXT_PUBLIC_APPWRITE_LOGOS_BUCKET_ID!,
+    textures: process.env.NEXT_PUBLIC_APPWRITE_TEXTURES_BUCKET_ID!,
   },
 };
 
