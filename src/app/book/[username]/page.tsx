@@ -11,13 +11,14 @@ import { FONTS } from '@/lib/constants/fonts';
 import { appwriteConfig, storage } from '@/lib/appwrite/config';
 
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useBookingTheme } from '@/lib/hooks/use-booking-theme';
 
 export default function UserBookingPage({ params }: { params: Promise<{ username: string }> }) {
     const { username } = use(params);
     const [user, setUser] = useState<User | null>(null);
     const [eventTypes, setEventTypes] = useState<EventType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const { isDarkMode, toggleTheme, mounted } = useBookingTheme();
 
     useEffect(() => {
         const loadData = async () => {
@@ -74,7 +75,9 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
         }
     };
 
-    const toggleTheme = () => setIsDarkMode(!isDarkMode);
+    // Toggle Theme removed, handled by hook
+
+    if (!mounted) return null; // Prevent hydration mismatch
 
     return (
         <div
@@ -94,7 +97,7 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
                 style={{
                     backgroundImage: branding.texture.value,
                     backgroundSize: branding.texture.id === 'clean' ? 'auto' : '20px 20px',
-                    filter: isDarkMode ? 'invert(1) opacity(0.1)' : 'none'
+                    filter: isDarkMode ? 'invert(1) opacity(0.3)' : 'none'
                 }}
             />
 
@@ -138,7 +141,7 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
                     <h1 className={`text-4xl font-bold mb-4 tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1d0c0c]'}`}>
                         {user.heroTitle || user.name}
                     </h1>
-                    <p className={`text-xl mb-4 opacity-90 ${isDarkMode ? 'text-gray-300' : 'text-[#6b4444]'}`}>
+                    <p className={`text-xl mb-4 opacity-90 ${isDarkMode ? 'text-gray-300' : 'text-[#6b4444]'}`} style={{ textShadow: isDarkMode ? `0 0 20px ${branding.color}40` : 'none' }}>
                         {user.heroSubtitle || (user.bio ? user.bio : 'Book a time to connect!')}
                     </p>
                     {user.heroDescription && (
@@ -161,7 +164,10 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
                                 >
                                     <span
                                         className="material-symbols-outlined text-lg opacity-70 group-hover:opacity-100 transition-opacity"
-                                        style={{ color: isDarkMode ? 'white' : branding.color }}
+                                        style={{
+                                            color: isDarkMode ? 'white' : branding.color,
+                                            textShadow: isDarkMode ? `0 0 10px ${branding.color}` : 'none'
+                                        }}
                                     >
                                         {getSocialIcon(link.platform)}
                                     </span>
@@ -236,9 +242,9 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
 
                 {/* Mandatory Branding Footer */}
                 <footer className="mt-20 text-center flex flex-col items-center gap-3">
-                    <Link href="/" className={`inline-flex items-center gap-2 px-4 py-2 backdrop-blur-md rounded-full border hover:bg-opacity-80 transition-colors shadow-sm ${isDarkMode ? 'bg-white/10 border-white/10 text-gray-400 hover:bg-white/20' : 'bg-white/50 border-gray-100 hover:bg-white text-gray-500'}`}>
-                        <span className="text-xs font-semibold uppercase tracking-wider">Made with</span>
-                        <div className={`h-4 w-px ${isDarkMode ? 'bg-white/20' : 'bg-gray-200'}`} />
+                    <Link href="/" className={`inline-flex items-center gap-2 px-3 py-1.5 backdrop-blur-md rounded-full border hover:bg-opacity-80 transition-colors shadow-sm ${isDarkMode ? 'bg-white/10 border-white/10 text-gray-400 hover:bg-white/20' : 'bg-white/50 border-gray-100 hover:bg-white text-gray-500'}`}>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider">Made with</span>
+                        <div className={`h-3 w-px ${isDarkMode ? 'bg-white/20' : 'bg-gray-200'}`} />
                         <Logo size="sm" href="" className="scale-75 origin-left" />
                     </Link>
                 </footer>

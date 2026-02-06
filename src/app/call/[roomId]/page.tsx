@@ -23,6 +23,8 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
     const [isExpired, setIsExpired] = useState(false);
     const [isTooEarly, setIsTooEarly] = useState(false);
     const [userName, setUserName] = useState('');
+    const [brandColor, setBrandColor] = useState('#850000'); // Default maroon
+    const [hostAvatar, setHostAvatar] = useState<string | null>(null);
     const [hasJoined, setHasJoined] = useState(false);
     const [isHost, setIsHost] = useState(false);
     const [showNotes, setShowNotes] = useState(false);
@@ -144,6 +146,12 @@ export default function CallPage({ params }: { params: Promise<{ roomId: string 
                     ]);
                     setHost(foundHost);
                     setEventType(foundEventType);
+
+                    // Set branding from host
+                    if (foundHost) {
+                        if (foundHost.brandColor) setBrandColor(foundHost.brandColor);
+                        if (foundHost.avatar) setHostAvatar(foundHost.avatar);
+                    }
 
                     if (userProfile && foundBooking.userId === userProfile.$id) {
                         setIsHost(true);
@@ -316,7 +324,8 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                     </motion.div>
                     <h1 className="text-2xl font-bold text-[#1d0c0c] mb-2">Call Expired</h1>
                     <p className="text-[#6b4444] mb-8">This call link is no longer active.</p>
-                    <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white font-bold rounded-xl hover:shadow-xl hover:shadow-[#850000]/20 transition-all duration-300 hover:-translate-y-0.5">
+                    <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 text-white font-bold rounded-xl hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+                        style={{ background: `linear-gradient(to right, ${brandColor}, ${brandColor})` }}>
                         <span className="material-symbols-outlined">home</span>
                         Go Home
                     </Link>
@@ -397,7 +406,8 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                     </motion.div>
                     <h1 className="text-2xl font-bold text-[#1d0c0c] mb-2">Call Not Found</h1>
                     <p className="text-[#6b4444] mb-8">This call link is invalid.</p>
-                    <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white font-bold rounded-xl hover:shadow-xl hover:shadow-[#850000]/20 transition-all duration-300 hover:-translate-y-0.5">
+                    <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 text-white font-bold rounded-xl hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+                        style={{ background: `linear-gradient(to right, ${brandColor}, ${brandColor})` }}>
                         <span className="material-symbols-outlined">home</span>
                         Go Home
                     </Link>
@@ -574,9 +584,14 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                 transition={{ type: 'spring', delay: 0.2 }}
                                 className="relative w-28 h-28 mx-auto mb-6"
                             >
-                                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#850000] to-[#6b0000] animate-pulse opacity-30 blur-lg" />
-                                <div className="relative w-28 h-28 rounded-2xl bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center shadow-xl shadow-[#850000]/30">
-                                    <span className="text-white text-5xl font-bold">{host?.name?.charAt(0) || '?'}</span>
+                                <div className="absolute inset-0 rounded-2xl animate-pulse opacity-30 blur-lg" style={{ background: `linear-gradient(to bottom right, ${brandColor}, ${brandColor})` }} />
+                                <div className="relative w-28 h-28 rounded-2xl flex items-center justify-center shadow-xl overflow-hidden"
+                                    style={{ background: `linear-gradient(to bottom right, ${brandColor}, ${brandColor})`, boxShadow: `0 20px 25px -5px ${brandColor}40` }}>
+                                    {hostAvatar ? (
+                                        <img src={hostAvatar} alt={host?.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-white text-5xl font-bold">{host?.name?.charAt(0) || '?'}</span>
+                                    )}
                                 </div>
                                 <motion.div
                                     animate={{ scale: [1, 1.1, 1] }}
@@ -605,8 +620,8 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                             {/* Call Info */}
                             <div className="flex justify-center gap-6 mb-8">
                                 {[
-                                    { icon: 'schedule', label: `${eventType?.duration || 30} min`, color: 'text-[#850000]' },
-                                    { icon: 'calendar_today', label: new Date(booking.slotTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), color: 'text-[#850000]' },
+                                    { icon: 'schedule', label: `${eventType?.duration || 30} min`, color: `text-[${brandColor}]` },
+                                    { icon: 'calendar_today', label: new Date(booking.slotTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), color: `text-[${brandColor}]` },
                                     { icon: 'lock', label: 'Encrypted', color: 'text-green-600' },
                                 ].map((item, i) => (
                                     <motion.div
@@ -631,7 +646,8 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={handleJoin}
-                                className="relative w-full py-4 bg-gradient-to-r from-[#850000] to-[#6b0000] text-white rounded-xl font-bold text-lg flex items-center justify-center gap-3 shadow-xl shadow-[#850000]/25 overflow-hidden cursor-pointer group"
+                                className="relative w-full py-4 text-white rounded-xl font-bold text-lg flex items-center justify-center gap-3 shadow-xl overflow-hidden cursor-pointer group"
+                                style={{ background: `linear-gradient(to right, ${brandColor}, ${brandColor})`, boxShadow: `0 20px 25px -5px ${brandColor}40` }}
                             >
                                 {/* Shine effect */}
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -665,8 +681,13 @@ Action Items: ${actionItems.length > 0 ? actionItems.map((item, i) => `\n${i + 1
                                             transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
                                             className="absolute inset-0 rounded-full bg-[#850000]/30 blur-md"
                                         />
-                                        <div className="relative w-36 h-36 rounded-full bg-gradient-to-br from-[#850000] to-[#6b0000] flex items-center justify-center text-5xl font-bold shadow-2xl shadow-[#850000]/40 border-4 border-[#850000]/30">
-                                            {isHost ? booking.guestName.charAt(0) : host?.name?.charAt(0) || '?'}
+                                        <div className="relative w-36 h-36 rounded-full flex items-center justify-center text-5xl font-bold shadow-2xl border-4"
+                                            style={{ backgroundColor: brandColor, borderColor: `${brandColor}50`, boxShadow: `0 25px 50px -12px ${brandColor}60` }}>
+                                            {hostAvatar && !isHost ? (
+                                                <img src={hostAvatar} alt={host?.name} className="w-full h-full object-cover rounded-full" />
+                                            ) : (
+                                                <span className="text-white">{isHost ? booking.guestName.charAt(0) : host?.name?.charAt(0) || '?'}</span>
+                                            )}
                                         </div>
                                         {callState === 'connected' && (
                                             <motion.div

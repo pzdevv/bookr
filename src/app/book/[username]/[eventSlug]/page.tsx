@@ -15,6 +15,7 @@ import { TEXTURES } from '@/lib/constants/textures';
 import { FONTS } from '@/lib/constants/fonts';
 import { appwriteConfig, storage } from '@/lib/appwrite/config';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useBookingTheme } from '@/lib/hooks/use-booking-theme';
 
 export default function BookEventPage({ params }: { params: Promise<{ username: string; eventSlug: string }> }) {
     const { username, eventSlug } = use(params);
@@ -32,7 +33,7 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [step, setStep] = useState<1 | 2>(1);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const { isDarkMode, toggleTheme, mounted } = useBookingTheme();
     const guestTimezone = getUserTimezone();
 
     useEffect(() => {
@@ -248,7 +249,9 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
         );
     }
 
-    const toggleTheme = () => setIsDarkMode(!isDarkMode);
+    // toggleTheme removed, handled by hook
+
+    if (!mounted) return null; // Prevent hydration mismatch
 
     return (
         <div
@@ -268,7 +271,7 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                     style={{
                         backgroundImage: branding.texture.value,
                         backgroundSize: branding.texture.id === 'clean' ? 'auto' : '20px 20px',
-                        filter: isDarkMode ? 'invert(1) opacity(0.1)' : 'none'
+                        filter: isDarkMode ? 'invert(1) opacity(0.3)' : 'none'
                     }}
                 />
             )}
@@ -285,20 +288,8 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                 />
             </div>
 
-            {/* Custom Header (Simple) */}
-            <header className={`relative z-10 flex items-center justify-between px-6 md:px-10 py-5 backdrop-blur-xl border-b transition-colors ${isDarkMode ? 'bg-[#141414]/60 border-white/10' : 'bg-white/60'}`} style={{ borderColor: isDarkMode ? '' : `${branding?.color}10` }}>
-                <div className="flex items-center gap-3">
-                    {branding?.logo ? (
-                        <Link href={`/book/${username}`}>
-                            <img src={branding.logo} alt="Logo" className="h-8 object-contain" />
-                        </Link>
-                    ) : (
-                        <Link href={`/book/${username}`} className="font-bold text-xl" style={{ color: branding?.color }}>
-                            {user.name}
-                        </Link>
-                    )}
-                </div>
-            </header>
+            {/* Header Removed as per request */}
+            <div className="h-6 md:h-10" />
 
             <main className="relative z-10 max-w-5xl mx-auto py-6 px-4 md:px-6">
                 {/* Progress Indicator */}
@@ -334,7 +325,10 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className={`backdrop-blur-2xl rounded-2xl shadow-2xl overflow-hidden border transition-colors ${isDarkMode ? 'bg-[#141414]/90 border-white/10' : 'bg-white/90'}`}
-                    style={{ borderColor: isDarkMode ? '' : `${branding?.color}10`, boxShadow: `0 25px 50px -12px ${branding?.color}10` }}
+                    style={{
+                        borderColor: isDarkMode ? '' : `${branding?.color}10`,
+                        boxShadow: isDarkMode ? `0 0 40px -10px ${branding?.color}20` : `0 25px 50px -12px ${branding?.color}10`
+                    }}
                 >
                     <AnimatePresence mode="wait">
                         {step === 1 ? (
@@ -600,7 +594,10 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     className="mt-8 w-full py-5 text-white rounded-lg font-bold text-lg shadow-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    style={{ backgroundColor: branding?.color, boxShadow: `0 10px 15px -3px ${branding?.color}30` }}
+                                    style={{
+                                        backgroundColor: branding?.color,
+                                        boxShadow: isDarkMode ? `0 0 30px ${branding?.color}50` : `0 10px 15px -3px ${branding?.color}30`
+                                    }}
                                 >
                                     {isSubmitting ? (
                                         <>
@@ -620,10 +617,10 @@ export default function BookEventPage({ params }: { params: Promise<{ username: 
                 </motion.div>
 
                 {/* Mandatory Branding Footer */}
-                <footer className="mt-20 text-center flex flex-col items-center gap-3">
-                    <Link href="/" className={`inline-flex items-center gap-2 px-4 py-2 backdrop-blur-md rounded-full border hover:bg-opacity-80 transition-colors shadow-sm ${isDarkMode ? 'bg-white/10 border-white/10 text-gray-400 hover:bg-white/20' : 'bg-white/50 border-gray-100 hover:bg-white text-gray-500'}`}>
-                        <span className="text-xs font-semibold uppercase tracking-wider">Made with</span>
-                        <div className={`h-4 w-px ${isDarkMode ? 'bg-white/20' : 'bg-gray-200'}`} />
+                <footer className="mt-8 text-center flex flex-col items-center gap-3 relative z-10">
+                    <Link href="/" className={`inline-flex items-center gap-2 px-3 py-1.5 backdrop-blur-md rounded-full border hover:bg-opacity-80 transition-colors shadow-sm ${isDarkMode ? 'bg-white/10 border-white/10 text-gray-400 hover:bg-white/20' : 'bg-white/50 border-gray-100 hover:bg-white text-gray-500'}`}>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider">Made with</span>
+                        <div className={`h-3 w-px ${isDarkMode ? 'bg-white/20' : 'bg-gray-200'}`} />
                         <Logo size="sm" href="" className="scale-75 origin-left" />
                     </Link>
                 </footer>

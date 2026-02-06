@@ -8,6 +8,7 @@ import { sanitizeName } from '@/lib/utils/sanitize';
 import confetti from 'canvas-confetti';
 
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useBookingTheme } from '@/lib/hooks/use-booking-theme';
 
 function ConfirmContent() {
     const searchParams = useSearchParams();
@@ -17,7 +18,7 @@ function ConfirmContent() {
     const duration = parseInt(searchParams.get('duration') || '30');
     const roomId = searchParams.get('room');
     const [copied, setCopied] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const { isDarkMode, toggleTheme, mounted } = useBookingTheme();
 
     const bookingDate = date ? new Date(date) : new Date();
     const endDate = new Date(bookingDate.getTime() + duration * 60 * 1000);
@@ -68,13 +69,15 @@ END:VCALENDAR`;
         }
     };
 
-    const toggleTheme = () => setIsDarkMode(!isDarkMode);
+    // toggleTheme removed, handled by hook
+
+    if (!mounted) return null;
 
     return (
         <div className={`min-h-screen flex items-center justify-center p-4 font-[Inter,sans-serif] relative overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-[#0a0a0a]' : 'bg-[#fcf8f8]'}`}
             style={{
                 backgroundImage: isDarkMode
-                    ? 'radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.03) 1px, transparent 0)'
+                    ? 'radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.3) 1px, transparent 0)'
                     : 'radial-gradient(circle at 2px 2px, rgba(133, 0, 0, 0.02) 1px, transparent 0)',
                 backgroundSize: '32px 32px'
             }}>
