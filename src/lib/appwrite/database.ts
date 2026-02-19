@@ -22,6 +22,8 @@ export interface User {
     heroDescription?: string; // Custom Hero Description
     socialLinks?: string; // JSON string of social links
     timezone: string;
+    textToSpeech?: boolean; // New field for text-to-speech preference
+    allowEmbedding?: boolean; // New field for iframe embedding preference
     $createdAt: string;
     $updatedAt: string;
 }

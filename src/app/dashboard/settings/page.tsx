@@ -20,6 +20,7 @@ export default function SettingsPage() {
     const [username, setUsername] = useState('');
     const [bio, setBio] = useState('');
     const [timezone, setTimezone] = useState('');
+    const [allowEmbedding, setAllowEmbedding] = useState(false);
 
     // Customization State
     const [brandColor, setBrandColor] = useState('#850000');
@@ -54,6 +55,7 @@ export default function SettingsPage() {
             setBio(userProfile.bio || '');
             setTimezone(userProfile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
             setAvatarUrl(userProfile.avatar || '');
+            setAllowEmbedding(userProfile.allowEmbedding || false);
 
             // Populate customization fields
             setBrandColor(userProfile.brandColor || '#850000');
@@ -173,11 +175,11 @@ export default function SettingsPage() {
                 heroTitle,
                 heroSubtitle,
                 heroDescription,
-                socialLinks
+                socialLinks,
+                allowEmbedding
             });
             await refreshUser();
             setSaveMessage('Settings saved!');
-
 
         } catch (error) {
             console.error('Error:', error);
@@ -412,6 +414,28 @@ export default function SettingsPage() {
                     </div>
                     <div className="p-6">
                         <SocialsEditor value={socialLinks} onChange={setSocialLinks} />
+                    </div>
+                </div>
+
+                {/* Privacy Section */}
+                <div className="settings-section bg-white rounded-xl border border-[#850000]/5 overflow-hidden shadow-[4px_4px_0px_0px_rgba(133,0,0,0.1)]">
+                    <div className="px-6 py-5 border-b border-[#850000]/5">
+                        <h3 className="text-lg font-bold text-[#1d0c0c]">Privacy</h3>
+                        <p className="text-sm text-[#6b4444]">Manage your public page privacy settings.</p>
+                    </div>
+                    <div className="p-6">
+                        <div className="flex items-center justify-between py-1">
+                            <div>
+                                <p className="text-sm font-medium text-[#1d0c0c]">Allow Embedding</p>
+                                <p className="text-xs text-[#6b4444]">Allow other websites to embed your booking page via iframe.</p>
+                            </div>
+                            <button
+                                onClick={() => setAllowEmbedding(!allowEmbedding)}
+                                className={`w-10 h-6 rounded-full transition-colors relative ${allowEmbedding ? 'bg-[#850000] shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]' : 'bg-gray-200'}`}
+                            >
+                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${allowEmbedding ? 'left-5' : 'left-1'}`} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 

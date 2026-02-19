@@ -11,8 +11,10 @@ export function middleware(request: NextRequest) {
     // Security Headers for Production
     const headers = response.headers;
 
-    // Prevent clickjacking
-    headers.set('X-Frame-Options', 'DENY');
+    // Prevent clickjacking (Allow for booking pages)
+    if (!request.nextUrl.pathname.startsWith('/book/')) {
+        headers.set('X-Frame-Options', 'DENY');
+    }
 
     // XSS Protection
     headers.set('X-XSS-Protection', '1; mode=block');
@@ -47,7 +49,9 @@ export function middleware(request: NextRequest) {
             "img-src 'self' data: blob: https: http:",
             "connect-src 'self' https://cloud.appwrite.io https://*.cloud.appwrite.io wss://*.peerjs.com https://*.peerjs.com https://0.peerjs.com",
             "media-src 'self' blob:",
-            "frame-ancestors 'none'",
+            request.nextUrl.pathname.startsWith('/book/')
+                ? "frame-ancestors *"
+                : "frame-ancestors 'none'",
         ].join('; ')
     );
 
