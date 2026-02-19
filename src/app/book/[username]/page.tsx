@@ -13,6 +13,7 @@ import { appwriteConfig, storage } from '@/lib/appwrite/config';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useBookingTheme } from '@/lib/hooks/use-booking-theme';
 import { IframeGuard } from '@/components/booking/iframe-guard';
+import { Instagram } from 'lucide-react';
 
 export default function UserBookingPage({ params }: { params: Promise<{ username: string }> }) {
     const { username } = use(params);
@@ -66,7 +67,7 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
 
     const getSocialIcon = (platform: string) => {
         switch (platform.toLowerCase()) {
-            case 'instagram': return 'photo_camera';
+            case 'instagram': return <Instagram className="w-5 h-5" strokeWidth={1.5} />;
             case 'twitter': return 'alternate_email';
             case 'linkedin': return 'work';
             case 'youtube': return 'smart_display';
@@ -164,15 +165,27 @@ export default function UserBookingPage({ params }: { params: Promise<{ username
                                         className={`w-10 h-10 rounded-full border flex items-center justify-center hover:scale-110 transition-transform shadow-sm hover:shadow-md group ${isDarkMode ? 'bg-white/10 border-white/10' : 'bg-white'}`}
                                         style={{ borderColor: isDarkMode ? '' : `${branding.color}20` }}
                                     >
-                                        <span
-                                            className="material-symbols-outlined text-lg opacity-70 group-hover:opacity-100 transition-opacity"
-                                            style={{
-                                                color: isDarkMode ? 'white' : branding.color,
-                                                textShadow: isDarkMode ? `0 0 10px ${branding.color}` : 'none'
-                                            }}
-                                        >
-                                            {getSocialIcon(link.platform)}
-                                        </span>
+                                        {typeof getSocialIcon(link.platform) === 'string' ? (
+                                            <span
+                                                className="material-symbols-outlined text-lg opacity-70 group-hover:opacity-100 transition-opacity"
+                                                style={{
+                                                    color: isDarkMode ? 'white' : branding.color,
+                                                    textShadow: isDarkMode ? `0 0 10px ${branding.color}` : 'none'
+                                                }}
+                                            >
+                                                {getSocialIcon(link.platform)}
+                                            </span>
+                                        ) : (
+                                            <span
+                                                className="flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity"
+                                                style={{
+                                                    color: isDarkMode ? 'white' : branding.color,
+                                                    filter: isDarkMode ? `drop-shadow(0 0 5px ${branding.color})` : 'none'
+                                                }}
+                                            >
+                                                {getSocialIcon(link.platform)}
+                                            </span>
+                                        )}
                                     </a>
                                 ))}
                             </div>
